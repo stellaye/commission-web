@@ -19,7 +19,7 @@ const calcLinks = [
 const WX_CONFIG = {
   appId: 'wxd642d4eeae08b232', // 替换为你的网站应用AppID
   redirectUri: "https://stellarsmart.cn/commission_web/",
-  scope: 'snsapi_userinfo', // snsapi_userinfo可获取用户昵称头像，snsapi_base仅获取openid
+  scope: 'snsapi_login', // snsapi_userinfo可获取用户昵称头像，snsapi_base仅获取openid
   state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10) // 随机state防CSRF
 };
 
