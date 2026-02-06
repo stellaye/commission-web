@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift } from 'lucide-react';
 
-// 测算链接数据（后续可改成从后端API获取）
+// 测算链接数据
 const calcLinks = [
   { id: 1, name: '八字精批', desc: '详解一生运势', price: 99, commission: 30, icon: '🔒' },
   { id: 2, name: '姻缘测算', desc: '测你的正缘何时出现', price: 68, commission: 20, icon: '💕' },
@@ -15,12 +15,12 @@ const calcLinks = [
   { id: 10, name: '姓名测算', desc: '名字影响命运', price: 38, commission: 12, icon: '📝' },
 ];
 
-// 微信登录配置（替换成你自己的）
+// 微信登录配置
 const WX_CONFIG = {
-  appId: 'wxd642d4eeae08b232', // 替换为你的网站应用AppID
+  appId: 'wxd642d4eeae08b232',
   redirectUri: "https://stellarsmart.cn/commission_web/",
-  scope: 'snsapi_login', // snsapi_userinfo可获取用户昵称头像，snsapi_base仅获取openid
-  state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10) // 随机state防CSRF
+  scope: 'snsapi_login',
+  state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10)
 };
 
 function App() {
@@ -32,88 +32,19 @@ function App() {
   const [balance, setBalance] = useState(1688.50);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(true);
+  const [wxLoginReady, setWxLoginReady] = useState(false);
 
-  // 新增扫码登录相关状态
-  const [qrcodeUrl, setQrcodeUrl] = useState(''); // 二维码图片地址
-  const [uuid, setUuid] = useState(''); // 微信返回的唯一标识
-  const [scanStatus, setScanStatus] = useState(''); // 扫码状态：未扫码/已扫码/已授权/失败
-  const [pollingTimer, setPollingTimer] = useState(null); // 轮询定时器
+  // 关键：使用ref来避免重复初始化
+  const wxLoginContainerRef = useRef(null);
+  const wxScriptRef = useRef(null);
+  const isWxLoginInitialized = useRef(false);
 
-  // 获取微信扫码登录二维码
-  const getWxQrcode = async () => {
-    try {
-      // 调用后端接口获取二维码参数
-      const res = await fetch('/api/wechat/qrcode/login', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setQrcodeUrl(data.qrcodeUrl); // 微信官方二维码地址
-        setUuid(data.uuid); // 唯一标识，用于轮询
-        setScanStatus('waiting'); // 等待扫码
-
-        // 启动轮询，检查登录状态（每3秒一次）
-        const timer = setInterval(() => {
-          checkLoginStatus(data.uuid);
-        }, 3000);
-        setPollingTimer(timer);
-      }
-    } catch (error) {
-      console.error('获取二维码失败:', error);
-      alert('获取登录二维码失败，请重试');
-    }
-  };
-
-  // 轮询检查登录状态
-  const checkLoginStatus = async (uuid) => {
-    try {
-      const res = await fetch(`/api/wechat/qrcode/check?uuid=${uuid}`, {
-        method: 'GET',
-      });
-      const data = await res.json();
-
-      if (data.status === 'scanned') {
-        // 已扫码，未授权
-        setScanStatus('scanned');
-      } else if (data.status === 'authorized') {
-        // 已授权，登录成功
-        setScanStatus('authorized');
-        // 清除轮询定时器
-        clearInterval(pollingTimer);
-        // 保存用户信息，完成登录
-        setUser({
-          nickname: data.user.nickname,
-          avatar: data.user.avatar,
-          id: data.user.openid
-        });
-      } else if (data.status === 'expired') {
-        // 二维码过期
-        setScanStatus('expired');
-        clearInterval(pollingTimer);
-        alert('二维码已过期，请重新获取');
-        setQrcodeUrl('');
-      }
-    } catch (error) {
-      console.error('检查登录状态失败:', error);
-    }
-  };
-
-  // 组件卸载时清除定时器
-  useEffect(() => {
-    return () => {
-      if (pollingTimer) {
-        clearInterval(pollingTimer);
-      }
-    };
-  }, [pollingTimer]);
-
-  // 替换原有PC端扫码登录的渲染逻辑
   // 检测屏幕宽度
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -131,19 +62,139 @@ function App() {
     const code = getUrlParam('code');
     const state = getUrlParam('state');
 
-    // 如果有code且state匹配，说明是微信授权回调
     if (code && state && state.includes('wx_login_state_')) {
+      console.log('检测到微信授权回调，code:', code);
       handleWxCodeToUserInfo(code);
     }
   }, []);
 
-  // 跳转到微信授权页面（真实微信登录逻辑）
+  // PC端：加载微信登录SDK并初始化
+  // PC端：加载微信登录SDK并初始化
+  useEffect(() => {
+    // 只在PC端且未登录时执行
+    if (isMobile || user) {
+      return;
+    }
+
+    // 如果已经初始化过，直接返回
+    if (isWxLoginInitialized.current) {
+      console.log('微信登录已初始化，跳过');
+      return;
+    }
+
+    console.log('准备加载微信登录SDK');
+
+    // 检查脚本是否已经存在
+    const existingScript = document.querySelector('script[src*="wxLogin.js"]');
+    if (existingScript && wxScriptRef.current) {
+      console.log('微信登录脚本已存在，直接初始化');
+      initWxLogin();
+      return;
+    }
+
+    // 动态加载微信登录JS
+    const script = document.createElement('script');
+    script.src = 'https://res.wx.qq.com/connect/zh_CN/htmledition/js/wxLogin.js';
+    script.async = true;
+
+    script.onload = () => {
+      console.log('微信登录JS加载成功');
+      wxScriptRef.current = script;
+      // 延迟初始化，确保DOM已经渲染
+      setTimeout(() => {
+        initWxLogin();
+      }, 100);
+    };
+
+    script.onerror = () => {
+      console.error('微信登录JS加载失败');
+      alert('微信登录组件加载失败，请刷新页面重试');
+    };
+
+    document.body.appendChild(script);
+
+    // 清理函数
+    return () => {
+      console.log('组件卸载，清理微信登录容器');
+      // 清空容器内容，但不移除容器本身
+      const container = document.getElementById('wx_login_container');
+      if (container) {
+        // 使用innerHTML清空，避免removeChild错误
+        container.innerHTML = '';
+      }
+    };
+  }, [isMobile, user]);
+
+  // 初始化微信登录
+  const initWxLogin = () => {
+    // 防止重复初始化
+    if (isWxLoginInitialized.current) {
+      console.log('微信登录已初始化，跳过');
+      return;
+    }
+
+    // 检查WxLogin是否可用
+    if (typeof window.WxLogin === 'undefined') {
+      console.error('WxLogin未定义，延迟重试');
+      setTimeout(initWxLogin, 300);
+      return;
+    }
+
+    // 检查容器是否存在
+    const container = document.getElementById('wx_login_container');
+    if (!container) {
+      console.error('找不到wx_login_container');
+      return;
+    }
+
+    try {
+      console.log('开始初始化微信登录');
+
+      // 标记为已初始化
+      isWxLoginInitialized.current = true;
+
+      // 创建微信登录实例
+      new window.WxLogin({
+        self_redirect: false,
+        id: "wx_login_container",
+        appid: WX_CONFIG.appId,
+        scope: WX_CONFIG.scope,
+        redirect_uri: encodeURIComponent(WX_CONFIG.redirectUri),
+        state: WX_CONFIG.state,
+        style: "black",
+        fast_login: 1, // 启用快速登录
+        color_scheme: "auto",
+        onReady: function (isReady) {
+          console.log('微信登录二维码加载状态:', isReady);
+          if (isReady) {
+            setWxLoginReady(true);
+          }
+        }
+      });
+
+      console.log('微信登录初始化完成');
+    } catch (error) {
+      console.error('初始化微信登录失败:', error);
+      isWxLoginInitialized.current = false; // 重置标记以便重试
+    }
+  };
+
+  // 切换登录方式时重置状态
+  const handleSwitchLoginMode = (mobile) => {
+    console.log('切换登录模式:', mobile ? '手机' : 'PC');
+    setIsMobile(mobile);
+    setWxLoginReady(false);
+    isWxLoginInitialized.current = false; // 重置初始化标记
+  };
+
+  // 手机端：跳转到微信授权页面
   const handleLogin = () => {
     setLoading(true);
     try {
-      // 构造微信授权URL
-      const authUrl = `https://open.weixin.qq.com/connect/qrconnect?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_login&state=${WX_CONFIG.state}#wechat_redirect`;
-      // 跳转到微信授权页面（手机端会自动唤起微信App）
+      // 移动端使用snsapi_userinfo以获取用户信息
+      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${WX_CONFIG.state}#wechat_redirect`;
+
+      console.log('跳转到微信授权页面');
       window.location.href = authUrl;
     } catch (error) {
       console.error('微信登录跳转失败:', error);
@@ -152,11 +203,12 @@ function App() {
     }
   };
 
-  // 将微信返回的code传给后端，换取用户信息
+  // 用code换取用户信息
   const handleWxCodeToUserInfo = async (code) => {
     setLoading(true);
+    console.log('开始用code换取用户信息');
+
     try {
-      // 调用后端接口换取用户信息
       const response = await fetch('/api/wechat/login', {
         method: 'POST',
         headers: {
@@ -166,14 +218,15 @@ function App() {
       });
 
       const data = await response.json();
+      console.log('后端返回数据:', data);
 
       if (data.success && data.user) {
-        // 登录成功，保存用户信息
         setUser({
-          nickname: data.user.nickname,
-          avatar: data.user.headimgurl,
-          id: data.user.openid // 使用openid作为用户ID
+          nickname: data.user.nickname || '微信用户',
+          avatar: data.user.headimgurl || data.user.avatar || 'https://via.placeholder.com/100',
+          id: data.user.openid
         });
+        console.log('登录成功');
       } else {
         alert('微信登录失败：' + (data.msg || '未知错误'));
       }
@@ -182,7 +235,7 @@ function App() {
       alert('网络错误，请重试');
     } finally {
       setLoading(false);
-      // 清除URL中的code和state参数，优化体验
+      // 清除URL中的code和state参数
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -206,14 +259,13 @@ function App() {
       alert('余额不足');
       return;
     }
-    // TODO: 这里调用后端API提交提现申请
     alert(`提现申请已提交！\n金额：¥${amount.toFixed(2)}\n预计1-3个工作日到账微信零钱`);
     setBalance(prev => prev - amount);
     setShowWithdraw(false);
     setWithdrawAmount('');
   };
 
-  // ========== 登录页面 ==========
+  // 登录页面
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-500 to-green-600 flex flex-col items-center justify-center p-6">
@@ -230,25 +282,22 @@ function App() {
           {/* 登录方式切换 */}
           <div className="flex justify-center gap-4 mb-6">
             <button
-              onClick={() => setIsMobile(true)}
+              onClick={() => handleSwitchLoginMode(true)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
                 }`}
             >
               <Smartphone size={16} /> 手机登录
             </button>
             <button
-              onClick={() => {
-                setIsMobile(false);
-                // 切换到PC端后，自动获取二维码
-                setTimeout(() => getWxQrcode(), 100);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${!isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+              onClick={() => handleSwitchLoginMode(false)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${!isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
             >
               <QrCode size={16} /> 扫码登录
             </button>
           </div>
 
-          {/* 手机端：真实微信登录 */}
+          {/* 手机端登录 */}
           {isMobile ? (
             <button
               onClick={handleLogin}
@@ -259,7 +308,6 @@ function App() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  {/* 微信图标 */}
                   <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
                     <path d="M8.5 2C4.4 2 1 5.1 1 9c0 2.1 1.1 4 2.8 5.3.1.1.2.3.1.4l-.4 1.4c0 .1 0 .2.1.3.1.1.2.1.3.1h.2l1.8-1.1c.2-.1.4-.1.5 0 .7.2 1.4.3 2.1.3.3 0 .5 0 .8-.1-.2-.5-.3-1.1-.3-1.6 0-3.4 3.1-6.2 7-6.2.3 0 .5 0 .8.1C16.4 4.6 12.8 2 8.5 2zm-3 5.5c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5 0c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5.5 2.3c-3.4 0-6.2 2.4-6.2 5.4s2.8 5.4 6.2 5.4c.6 0 1.2-.1 1.8-.2.2 0 .3 0 .5.1l1.4.8h.1c.1 0 .2-.1.2-.2v-.1l-.3-1.1c0-.2 0-.3.1-.4 1.4-1 2.3-2.6 2.3-4.3.1-3-2.7-5.4-6.1-5.4zm-2.5 4.3c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8zm4.8 0c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8z" />
                   </svg>
@@ -268,42 +316,29 @@ function App() {
               )}
             </button>
           ) : (
-            /* PC端：真实微信扫码登录 */
-            <div className="text-center">
-              <div className="bg-gray-50 rounded-2xl p-6 mb-4">
-                <div className="w-40 h-40 mx-auto bg-white rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
-                  {qrcodeUrl ? (
-                    <>
-                      <img src={qrcodeUrl} alt="微信登录二维码" className="w-full h-full p-2" />
-                      {/* 扫码状态提示 */}
-                      <div className="mt-2 text-xs text-gray-500">
-                        {scanStatus === 'waiting' && '请使用微信扫码登录'}
-                        {scanStatus === 'scanned' && '已扫码，请在微信中确认授权'}
-                        {scanStatus === 'authorized' && '授权成功，正在登录...'}
-                        {scanStatus === 'expired' && '二维码已过期'}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center" onClick={getWxQrcode} style={{ cursor: 'pointer' }}>
-                      <QrCode size={80} className="text-gray-300 mx-auto" />
-                      <p className="text-xs text-gray-400 mt-2">点击刷新二维码</p>
+            /* PC端扫码登录 - 关键：使用key强制重新渲染 */
+            <div className="text-center" key={`wx-login-${isMobile}`}>
+              <div className="bg-gray-50 rounded-2xl p-6 mb-4 relative">
+                {/* loading 放在外层，用定位覆盖，不作为 wx_login_container 的子元素 */}
+                {!wxLoginReady && (
+                  <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-50 rounded-2xl">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-gray-400 text-sm">正在加载微信登录...</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+                {/* 这个容器内不要放任何 React 子元素，完全交给 WxLogin 管理 */}
+                <div
+                  id="wx_login_container"
+                  ref={wxLoginContainerRef}
+                  className="min-h-[280px]"
+                />
               </div>
               <p className="text-gray-500 text-sm">请使用微信扫一扫登录</p>
-              {qrcodeUrl && (
-                <button
-                  onClick={() => {
-                    clearInterval(pollingTimer);
-                    setQrcodeUrl('');
-                    setScanStatus('');
-                  }}
-                  className="mt-2 text-green-500 text-sm underline"
-                >
-                  取消登录
-                </button>
-              )}
+              <p className="text-green-600 text-xs mt-2 font-medium">
+                💡 已登录微信客户端可快速登录，无需扫码
+              </p>
             </div>
           )}
 
@@ -315,7 +350,7 @@ function App() {
     );
   }
 
-  // ========== 主页面（登录后） ==========
+  // 主页面（登录后）
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">
       {/* 顶部背景 */}
@@ -330,7 +365,11 @@ function App() {
               </div>
             </div>
             <button
-              onClick={() => setUser(null)}
+              onClick={() => {
+                setUser(null);
+                setWxLoginReady(false);
+                isWxLoginInitialized.current = false;
+              }}
               className="p-2 hover:bg-white/20 rounded-full transition"
             >
               <LogOut size={20} />
@@ -411,8 +450,8 @@ function App() {
                 <button
                   onClick={() => copyLink(item.id)}
                   className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id
-                    ? 'bg-green-500 text-white'
-                    : 'bg-green-50 text-green-600 hover:bg-green-100'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-green-50 text-green-600 hover:bg-green-100'
                     }`}
                 >
                   {copiedId === item.id ? (
@@ -430,7 +469,7 @@ function App() {
       {/* 提现弹窗 */}
       {showWithdraw && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-6 animate-slide-up">
+          <div className="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold">申请提现</h3>
               <button
