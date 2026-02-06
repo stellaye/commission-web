@@ -142,7 +142,7 @@ function App() {
     setLoading(true);
     try {
       // 构造微信授权URL
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=${WX_CONFIG.scope}&state=${WX_CONFIG.state}#wechat_redirect`;
+      const authUrl = `https://open.weixin.qq.com/connect/qrconnect?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_login&state=${WX_CONFIG.state}#wechat_redirect`;
       // 跳转到微信授权页面（手机端会自动唤起微信App）
       window.location.href = authUrl;
     } catch (error) {
@@ -237,9 +237,12 @@ function App() {
               <Smartphone size={16} /> 手机登录
             </button>
             <button
-              onClick={() => setIsMobile(false)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${!isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
+              onClick={() => {
+                setIsMobile(false);
+                // 切换到PC端后，自动获取二维码
+                setTimeout(() => getWxQrcode(), 100);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${!isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'}`}
             >
               <QrCode size={16} /> 扫码登录
             </button>
@@ -408,8 +411,8 @@ function App() {
                 <button
                   onClick={() => copyLink(item.id)}
                   className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id
-                      ? 'bg-green-500 text-white'
-                      : 'bg-green-50 text-green-600 hover:bg-green-100'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-green-50 text-green-600 hover:bg-green-100'
                     }`}
                 >
                   {copiedId === item.id ? (
