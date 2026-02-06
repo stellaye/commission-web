@@ -33,6 +33,84 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(true);
 
+  // 新增扫码登录相关状态
+  const [qrcodeUrl, setQrcodeUrl] = useState(''); // 二维码图片地址
+  const [uuid, setUuid] = useState(''); // 微信返回的唯一标识
+  const [scanStatus, setScanStatus] = useState(''); // 扫码状态：未扫码/已扫码/已授权/失败
+  const [pollingTimer, setPollingTimer] = useState(null); // 轮询定时器
+
+  // 获取微信扫码登录二维码
+  const getWxQrcode = async () => {
+    try {
+      // 调用后端接口获取二维码参数
+      const res = await fetch('/api/wechat/qrcode/login', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQrcodeUrl(data.qrcodeUrl); // 微信官方二维码地址
+        setUuid(data.uuid); // 唯一标识，用于轮询
+        setScanStatus('waiting'); // 等待扫码
+
+        // 启动轮询，检查登录状态（每3秒一次）
+        const timer = setInterval(() => {
+          checkLoginStatus(data.uuid);
+        }, 3000);
+        setPollingTimer(timer);
+      }
+    } catch (error) {
+      console.error('获取二维码失败:', error);
+      alert('获取登录二维码失败，请重试');
+    }
+  };
+
+  // 轮询检查登录状态
+  const checkLoginStatus = async (uuid) => {
+    try {
+      const res = await fetch(`/api/wechat/qrcode/check?uuid=${uuid}`, {
+        method: 'GET',
+      });
+      const data = await res.json();
+
+      if (data.status === 'scanned') {
+        // 已扫码，未授权
+        setScanStatus('scanned');
+      } else if (data.status === 'authorized') {
+        // 已授权，登录成功
+        setScanStatus('authorized');
+        // 清除轮询定时器
+        clearInterval(pollingTimer);
+        // 保存用户信息，完成登录
+        setUser({
+          nickname: data.user.nickname,
+          avatar: data.user.avatar,
+          id: data.user.openid
+        });
+      } else if (data.status === 'expired') {
+        // 二维码过期
+        setScanStatus('expired');
+        clearInterval(pollingTimer);
+        alert('二维码已过期，请重新获取');
+        setQrcodeUrl('');
+      }
+    } catch (error) {
+      console.error('检查登录状态失败:', error);
+    }
+  };
+
+  // 组件卸载时清除定时器
+  useEffect(() => {
+    return () => {
+      if (pollingTimer) {
+        clearInterval(pollingTimer);
+      }
+    };
+  }, [pollingTimer]);
+
+  // 替换原有PC端扫码登录的渲染逻辑
   // 检测屏幕宽度
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -52,7 +130,7 @@ function App() {
   useEffect(() => {
     const code = getUrlParam('code');
     const state = getUrlParam('state');
-    
+
     // 如果有code且state匹配，说明是微信授权回调
     if (code && state && state.includes('wx_login_state_')) {
       handleWxCodeToUserInfo(code);
@@ -88,7 +166,7 @@ function App() {
       });
 
       const data = await response.json();
-      
+
       if (data.success && data.user) {
         // 登录成功，保存用户信息
         setUser({
@@ -153,17 +231,15 @@ function App() {
           <div className="flex justify-center gap-4 mb-6">
             <button
               onClick={() => setIsMobile(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
-                isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
             >
               <Smartphone size={16} /> 手机登录
             </button>
             <button
               onClick={() => setIsMobile(false)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
-                !isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${!isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
             >
               <QrCode size={16} /> 扫码登录
             </button>
@@ -182,40 +258,49 @@ function App() {
                 <>
                   {/* 微信图标 */}
                   <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-                    <path d="M8.5 2C4.4 2 1 5.1 1 9c0 2.1 1.1 4 2.8 5.3.1.1.2.3.1.4l-.4 1.4c0 .1 0 .2.1.3.1.1.2.1.3.1h.2l1.8-1.1c.2-.1.4-.1.5 0 .7.2 1.4.3 2.1.3.3 0 .5 0 .8-.1-.2-.5-.3-1.1-.3-1.6 0-3.4 3.1-6.2 7-6.2.3 0 .5 0 .8.1C16.4 4.6 12.8 2 8.5 2zm-3 5.5c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5 0c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5.5 2.3c-3.4 0-6.2 2.4-6.2 5.4s2.8 5.4 6.2 5.4c.6 0 1.2-.1 1.8-.2.2 0 .3 0 .5.1l1.4.8h.1c.1 0 .2-.1.2-.2v-.1l-.3-1.1c0-.2 0-.3.1-.4 1.4-1 2.3-2.6 2.3-4.3.1-3-2.7-5.4-6.1-5.4zm-2.5 4.3c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8zm4.8 0c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8z"/>
+                    <path d="M8.5 2C4.4 2 1 5.1 1 9c0 2.1 1.1 4 2.8 5.3.1.1.2.3.1.4l-.4 1.4c0 .1 0 .2.1.3.1.1.2.1.3.1h.2l1.8-1.1c.2-.1.4-.1.5 0 .7.2 1.4.3 2.1.3.3 0 .5 0 .8-.1-.2-.5-.3-1.1-.3-1.6 0-3.4 3.1-6.2 7-6.2.3 0 .5 0 .8.1C16.4 4.6 12.8 2 8.5 2zm-3 5.5c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5 0c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5.5 2.3c-3.4 0-6.2 2.4-6.2 5.4s2.8 5.4 6.2 5.4c.6 0 1.2-.1 1.8-.2.2 0 .3 0 .5.1l1.4.8h.1c.1 0 .2-.1.2-.2v-.1l-.3-1.1c0-.2 0-.3.1-.4 1.4-1 2.3-2.6 2.3-4.3.1-3-2.7-5.4-6.1-5.4zm-2.5 4.3c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8zm4.8 0c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8z" />
                   </svg>
                   微信一键登录
                 </>
               )}
             </button>
           ) : (
-            /* PC端：扫码登录（保留原有逻辑） */
+            /* PC端：真实微信扫码登录 */
             <div className="text-center">
               <div className="bg-gray-50 rounded-2xl p-6 mb-4">
                 <div className="w-40 h-40 mx-auto bg-white rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
-                  <div className="text-center">
-                    <QrCode size={80} className="text-gray-300 mx-auto" />
-                    <p className="text-xs text-gray-400 mt-2">模拟二维码</p>
-                  </div>
+                  {qrcodeUrl ? (
+                    <>
+                      <img src={qrcodeUrl} alt="微信登录二维码" className="w-full h-full p-2" />
+                      {/* 扫码状态提示 */}
+                      <div className="mt-2 text-xs text-gray-500">
+                        {scanStatus === 'waiting' && '请使用微信扫码登录'}
+                        {scanStatus === 'scanned' && '已扫码，请在微信中确认授权'}
+                        {scanStatus === 'authorized' && '授权成功，正在登录...'}
+                        {scanStatus === 'expired' && '二维码已过期'}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center" onClick={getWxQrcode} style={{ cursor: 'pointer' }}>
+                      <QrCode size={80} className="text-gray-300 mx-auto" />
+                      <p className="text-xs text-gray-400 mt-2">点击刷新二维码</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="text-gray-500 text-sm">请使用微信扫一扫登录</p>
-              <button 
-                onClick={() => {
-                  setLoading(true);
-                  setTimeout(() => {
-                    setUser({
-                      nickname: '推广达人',
-                      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=test',
-                      id: 'wx_888666'
-                    });
-                    setLoading(false);
-                  }, 1500);
-                }} 
-                className="mt-4 text-green-500 text-sm underline"
-              >
-                模拟扫码成功
-              </button>
+              {qrcodeUrl && (
+                <button
+                  onClick={() => {
+                    clearInterval(pollingTimer);
+                    setQrcodeUrl('');
+                    setScanStatus('');
+                  }}
+                  className="mt-2 text-green-500 text-sm underline"
+                >
+                  取消登录
+                </button>
+              )}
             </div>
           )}
 
@@ -322,11 +407,10 @@ function App() {
                 </div>
                 <button
                   onClick={() => copyLink(item.id)}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${
-                    copiedId === item.id
+                  className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id
                       ? 'bg-green-500 text-white'
                       : 'bg-green-50 text-green-600 hover:bg-green-100'
-                  }`}
+                    }`}
                 >
                   {copiedId === item.id ? (
                     <><Check size={16} />已复制</>
@@ -361,9 +445,8 @@ function App() {
 
             <div className="space-y-3 mb-6">
               <label
-                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${
-                  withdrawType === 'all' ? 'border-green-500 bg-green-50' : 'border-gray-200'
-                }`}
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${withdrawType === 'all' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                  }`}
               >
                 <input
                   type="radio"
@@ -375,9 +458,8 @@ function App() {
               </label>
 
               <label
-                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${
-                  withdrawType === 'custom' ? 'border-green-500 bg-green-50' : 'border-gray-200'
-                }`}
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${withdrawType === 'custom' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                  }`}
               >
                 <input
                   type="radio"
