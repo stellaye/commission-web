@@ -15,14 +15,6 @@ const calcLinks = [
   { id: 10, name: '姓名测算', desc: '名字影响命运', price: 38, commission: 12, icon: '📝' },
 ];
 
-// 微信登录配置（替换成你自己的）
-const WX_CONFIG = {
-  appId: 'wxd642d4eeae08b232', // 替换为你的网站应用AppID
-  redirectUri: "https://stellarsmart.cn/commission_web/",
-  scope: 'snsapi_userinfo', // snsapi_userinfo可获取用户昵称头像，snsapi_base仅获取openid
-  state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10) // 随机state防CSRF
-};
-
 function App() {
   const [user, setUser] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -41,72 +33,18 @@ function App() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 从URL中获取参数
-  const getUrlParam = (name) => {
-    const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`);
-    const r = window.location.search.substr(1).match(reg);
-    return r ? decodeURIComponent(r[2]) : null;
-  };
-
-  // 处理微信授权回调
-  useEffect(() => {
-    const code = getUrlParam('code');
-    const state = getUrlParam('state');
-    
-    // 如果有code且state匹配，说明是微信授权回调
-    if (code && state && state.includes('wx_login_state_')) {
-      handleWxCodeToUserInfo(code);
-    }
-  }, []);
-
-  // 跳转到微信授权页面（真实微信登录逻辑）
+  // 模拟微信登录（实际需要接入微信SDK）
   const handleLogin = () => {
     setLoading(true);
-    try {
-      // 构造微信授权URL
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=${WX_CONFIG.scope}&state=${WX_CONFIG.state}#wechat_redirect`;
-      // 跳转到微信授权页面（手机端会自动唤起微信App）
-      window.location.href = authUrl;
-    } catch (error) {
-      console.error('微信登录跳转失败:', error);
-      setLoading(false);
-      alert('登录失败，请重试');
-    }
-  };
-
-  // 将微信返回的code传给后端，换取用户信息
-  const handleWxCodeToUserInfo = async (code) => {
-    setLoading(true);
-    try {
-      // 调用后端接口换取用户信息
-      const response = await fetch('/api/wechat/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
+    // TODO: 这里替换成真实的微信登录逻辑
+    setTimeout(() => {
+      setUser({
+        nickname: '推广达人',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=test',
+        id: 'wx_888666'
       });
-
-      const data = await response.json();
-      
-      if (data.success && data.user) {
-        // 登录成功，保存用户信息
-        setUser({
-          nickname: data.user.nickname,
-          avatar: data.user.headimgurl,
-          id: data.user.openid // 使用openid作为用户ID
-        });
-      } else {
-        alert('微信登录失败：' + (data.msg || '未知错误'));
-      }
-    } catch (error) {
-      console.error('获取用户信息失败:', error);
-      alert('网络错误，请重试');
-    } finally {
       setLoading(false);
-      // 清除URL中的code和state参数，优化体验
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    }, 1500);
   };
 
   // 复制推广链接
@@ -169,7 +107,7 @@ function App() {
             </button>
           </div>
 
-          {/* 手机端：真实微信登录 */}
+          {/* 手机端：一键登录 */}
           {isMobile ? (
             <button
               onClick={handleLogin}
@@ -189,7 +127,7 @@ function App() {
               )}
             </button>
           ) : (
-            /* PC端：扫码登录（保留原有逻辑） */
+            /* PC端：扫码登录 */
             <div className="text-center">
               <div className="bg-gray-50 rounded-2xl p-6 mb-4">
                 <div className="w-40 h-40 mx-auto bg-white rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
@@ -200,20 +138,7 @@ function App() {
                 </div>
               </div>
               <p className="text-gray-500 text-sm">请使用微信扫一扫登录</p>
-              <button 
-                onClick={() => {
-                  setLoading(true);
-                  setTimeout(() => {
-                    setUser({
-                      nickname: '推广达人',
-                      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=test',
-                      id: 'wx_888666'
-                    });
-                    setLoading(false);
-                  }, 1500);
-                }} 
-                className="mt-4 text-green-500 text-sm underline"
-              >
+              <button onClick={handleLogin} className="mt-4 text-green-500 text-sm underline">
                 模拟扫码成功
               </button>
             </div>
