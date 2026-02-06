@@ -23,6 +23,11 @@ const WX_CONFIG = {
   state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10)
 };
 
+// 检测是否为真正的移动设备（通过 UA，而非屏幕宽度）
+const isRealMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -31,23 +36,20 @@ function App() {
   const [withdrawType, setWithdrawType] = useState('all');
   const [balance, setBalance] = useState(1688.50);
   const [loading, setLoading] = useState(false);
-  const [isMobile, setIsMobile] = useState(true);
+  const [loginMode, setLoginMode] = useState('mobile'); // 'mobile' | 'qrcode'
   const [wxLoginReady, setWxLoginReady] = useState(false);
+  const [isOnMobileDevice, setIsOnMobileDevice] = useState(true);
 
-  // 关键：使用ref来避免重复初始化
   const wxLoginContainerRef = useRef(null);
   const wxScriptRef = useRef(null);
   const isWxLoginInitialized = useRef(false);
 
-  // 检测屏幕宽度
+  // 检测设备类型（只在挂载时检测一次）
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const mobile = isRealMobileDevice();
+    setIsOnMobileDevice(mobile);
+    // 移动设备始终用手机登录模式，不给切换选项
+    setLoginMode(mobile ? 'mobile' : 'qrcode');
   }, []);
 
   // 从URL中获取参数
@@ -68,15 +70,12 @@ function App() {
     }
   }, []);
 
-  // PC端：加载微信登录SDK并初始化
-  // PC端：加载微信登录SDK并初始化
+  // PC端：加载微信登录SDK并初始化（仅在扫码模式下）
   useEffect(() => {
-    // 只在PC端且未登录时执行
-    if (isMobile || user) {
+    if (loginMode !== 'qrcode' || user) {
       return;
     }
 
-    // 如果已经初始化过，直接返回
     if (isWxLoginInitialized.current) {
       console.log('微信登录已初始化，跳过');
       return;
@@ -84,7 +83,6 @@ function App() {
 
     console.log('准备加载微信登录SDK');
 
-    // 检查脚本是否已经存在
     const existingScript = document.querySelector('script[src*="wxLogin.js"]');
     if (existingScript && wxScriptRef.current) {
       console.log('微信登录脚本已存在，直接初始化');
@@ -92,7 +90,6 @@ function App() {
       return;
     }
 
-    // 动态加载微信登录JS
     const script = document.createElement('script');
     script.src = 'https://res.wx.qq.com/connect/zh_CN/htmledition/js/wxLogin.js';
     script.async = true;
@@ -100,7 +97,6 @@ function App() {
     script.onload = () => {
       console.log('微信登录JS加载成功');
       wxScriptRef.current = script;
-      // 延迟初始化，确保DOM已经渲染
       setTimeout(() => {
         initWxLogin();
       }, 100);
@@ -113,34 +109,28 @@ function App() {
 
     document.body.appendChild(script);
 
-    // 清理函数
     return () => {
       console.log('组件卸载，清理微信登录容器');
-      // 清空容器内容，但不移除容器本身
       const container = document.getElementById('wx_login_container');
       if (container) {
-        // 使用innerHTML清空，避免removeChild错误
         container.innerHTML = '';
       }
     };
-  }, [isMobile, user]);
+  }, [loginMode, user]);
 
   // 初始化微信登录
   const initWxLogin = () => {
-    // 防止重复初始化
     if (isWxLoginInitialized.current) {
       console.log('微信登录已初始化，跳过');
       return;
     }
 
-    // 检查WxLogin是否可用
     if (typeof window.WxLogin === 'undefined') {
       console.error('WxLogin未定义，延迟重试');
       setTimeout(initWxLogin, 300);
       return;
     }
 
-    // 检查容器是否存在
     const container = document.getElementById('wx_login_container');
     if (!container) {
       console.error('找不到wx_login_container');
@@ -149,11 +139,8 @@ function App() {
 
     try {
       console.log('开始初始化微信登录');
-
-      // 标记为已初始化
       isWxLoginInitialized.current = true;
 
-      // 创建微信登录实例
       new window.WxLogin({
         self_redirect: false,
         id: "wx_login_container",
@@ -162,7 +149,7 @@ function App() {
         redirect_uri: encodeURIComponent(WX_CONFIG.redirectUri),
         state: WX_CONFIG.state,
         style: "black",
-        fast_login: 1, // 启用快速登录
+        fast_login: 1,
         color_scheme: "auto",
         onReady: function (isReady) {
           console.log('微信登录二维码加载状态:', isReady);
@@ -175,23 +162,24 @@ function App() {
       console.log('微信登录初始化完成');
     } catch (error) {
       console.error('初始化微信登录失败:', error);
-      isWxLoginInitialized.current = false; // 重置标记以便重试
+      isWxLoginInitialized.current = false;
     }
   };
 
-  // 切换登录方式时重置状态
-  const handleSwitchLoginMode = (mobile) => {
-    console.log('切换登录模式:', mobile ? '手机' : 'PC');
-    setIsMobile(mobile);
-    setWxLoginReady(false);
-    isWxLoginInitialized.current = false; // 重置初始化标记
+  // 切换登录方式（仅PC端可用）
+  const handleSwitchLoginMode = (mode) => {
+    console.log('切换登录模式:', mode);
+    setLoginMode(mode);
+    if (mode === 'qrcode') {
+      setWxLoginReady(false);
+      isWxLoginInitialized.current = false;
+    }
   };
 
   // 手机端：跳转到微信授权页面
   const handleLogin = () => {
     setLoading(true);
     try {
-      // 移动端使用snsapi_userinfo以获取用户信息
       const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${WX_CONFIG.state}#wechat_redirect`;
 
       console.log('跳转到微信授权页面');
@@ -235,7 +223,6 @@ function App() {
       alert('网络错误，请重试');
     } finally {
       setLoading(false);
-      // 清除URL中的code和state参数
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -279,26 +266,28 @@ function App() {
             <p className="text-gray-500 mt-2 text-sm">分享链接，轻松赚取高额佣金</p>
           </div>
 
-          {/* 登录方式切换 */}
-          <div className="flex justify-center gap-4 mb-6">
-            <button
-              onClick={() => handleSwitchLoginMode(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-            >
-              <Smartphone size={16} /> 手机登录
-            </button>
-            <button
-              onClick={() => handleSwitchLoginMode(false)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${!isMobile ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-            >
-              <QrCode size={16} /> 扫码登录
-            </button>
-          </div>
+          {/* 登录方式切换 - 仅在PC端显示 */}
+          {!isOnMobileDevice && (
+            <div className="flex justify-center gap-4 mb-6">
+              <button
+                onClick={() => handleSwitchLoginMode('mobile')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${loginMode === 'mobile' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+              >
+                <Smartphone size={16} /> 手机登录
+              </button>
+              <button
+                onClick={() => handleSwitchLoginMode('qrcode')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${loginMode === 'qrcode' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+              >
+                <QrCode size={16} /> 扫码登录
+              </button>
+            </div>
+          )}
 
-          {/* 手机端登录 */}
-          {isMobile ? (
+          {/* 手机端登录（移动设备始终走这里） */}
+          {loginMode === 'mobile' ? (
             <button
               onClick={handleLogin}
               disabled={loading}
@@ -316,10 +305,9 @@ function App() {
               )}
             </button>
           ) : (
-            /* PC端扫码登录 - 关键：使用key强制重新渲染 */
-            <div className="text-center" key={`wx-login-${isMobile}`}>
+            /* PC端扫码登录 */
+            <div className="text-center" key={`wx-login-${loginMode}`}>
               <div className="bg-gray-50 rounded-2xl p-6 mb-4 relative">
-                {/* loading 放在外层，用定位覆盖，不作为 wx_login_container 的子元素 */}
                 {!wxLoginReady && (
                   <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-50 rounded-2xl">
                     <div className="text-center">
@@ -328,7 +316,6 @@ function App() {
                     </div>
                   </div>
                 )}
-                {/* 这个容器内不要放任何 React 子元素，完全交给 WxLogin 管理 */}
                 <div
                   id="wx_login_container"
                   ref={wxLoginContainerRef}
