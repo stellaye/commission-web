@@ -216,6 +216,12 @@ function App() {
       console.log('后端返回数据:', data);
 
       if (data.success && data.user) {
+        // 关键修复1：保存token到localStorage
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          console.log('Token已保存到localStorage');
+        }
+        
         setUser({
           nickname: data.user.nickname || '微信用户',
           avatar: data.user.headimgurl || data.user.avatar || 'https://via.placeholder.com/100',
@@ -248,29 +254,47 @@ function App() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // 处理提现
+  // 处理提现 - 修复核心逻辑
   const handleWithdraw = async () => {
+    // 关键修复2：增加参数校验和日志打印
+    console.log('开始处理提现请求');
     const amount = withdrawType === 'all' ? balance : parseFloat(withdrawAmount);
 
-    if (!amount || amount <= 0) {
-      alert('请输入有效金额');
+    // 更严格的参数校验
+    if (isNaN(amount) || amount <= 0) {
+      alert('请输入有效的提现金额（大于0）');
       return;
     }
     if (amount > balance) {
-      alert('余额不足');
+      alert('提现金额不能超过可用余额');
+      return;
+    }
+    if (!user?.openid) {
+      alert('用户信息不完整，请重新登录');
       return;
     }
 
     try {
       setLoading(true);
+      console.log('准备发送提现请求，金额:', amount);
+
+      // 构建请求头
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      // 只有存在token时才添加Authorization头
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('请求头已添加Authorization token');
+      } else {
+        console.warn('未找到登录token，请求将不携带Authorization头');
+      }
 
       // 调用后端提现接口，传递登录方式
       const response = await fetch('/wanxiang/api/withdraw', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // 如果有token的话
-        },
+        headers: headers,
         body: JSON.stringify({
           amount: amount,
           openid: user.openid, // 用户openid
@@ -279,7 +303,10 @@ function App() {
         }),
       });
 
+      // 关键修复3：打印完整的响应信息
+      console.log('提现请求响应状态:', response.status);
       const data = await response.json();
+      console.log('提现请求响应数据:', data);
 
       if (data.success) {
         alert(`提现申请已提交！\n金额：¥${amount.toFixed(2)}\n预计1-3个工作日到账微信零钱`);
@@ -290,8 +317,9 @@ function App() {
         alert('提现失败：' + (data.msg || '未知错误'));
       }
     } catch (error) {
-      console.error('提现请求失败:', error);
-      alert('网络错误，请重试');
+      // 关键修复4：详细捕获并打印异常
+      console.error('提现请求失败详情:', error);
+      alert(`提现请求出错：${error.message || '网络异常，请检查网络连接'}`);
     } finally {
       setLoading(false);
     }
@@ -400,6 +428,8 @@ function App() {
                 setUser(null);
                 setWxLoginReady(false);
                 isWxLoginInitialized.current = false;
+                // 关键修复5：退出时清除token
+                localStorage.removeItem('token');
               }}
               className="p-2 hover:bg-white/20 rounded-full transition"
             >
@@ -505,7 +535,8 @@ function App() {
               <h3 className="text-xl font-bold">申请提现</h3>
               <button
                 onClick={() => setShowWithdraw(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                disabled={loading} // 关键修复6：加载中禁用关闭按钮
+                className="p-2 hover:bg-gray-100 rounded-full transition disabled:opacity-50"
               >
                 <X size={20} />
               </button>
@@ -525,6 +556,7 @@ function App() {
                   type="radio"
                   checked={withdrawType === 'all'}
                   onChange={() => setWithdrawType('all')}
+                  disabled={loading} // 关键修复7：加载中禁用单选框
                   className="accent-green-500"
                 />
                 <span className="font-medium">全部提现 (¥{balance.toFixed(2)})</span>
@@ -538,6 +570,7 @@ function App() {
                   type="radio"
                   checked={withdrawType === 'custom'}
                   onChange={() => setWithdrawType('custom')}
+                  disabled={loading} // 关键修复7：加载中禁用单选框
                   className="accent-green-500"
                 />
                 <span className="font-medium">自定义金额</span>
@@ -551,6 +584,7 @@ function App() {
                     value={withdrawAmount}
                     onChange={e => setWithdrawAmount(e.target.value)}
                     placeholder="请输入提现金额"
+                    disabled={loading} // 关键修复7：加载中禁用输入框
                     className="w-full pl-10 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none text-lg"
                   />
                 </div>
@@ -559,9 +593,17 @@ function App() {
 
             <button
               onClick={handleWithdraw}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 transition"
+              disabled={loading} // 关键修复8：加载中禁用提交按钮，防止重复点击
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 transition disabled:opacity-70"
             >
-              确认提现
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  处理中...
+                </div>
+              ) : (
+                '确认提现'
+              )}
             </button>
 
             <p className="text-center text-gray-400 text-xs mt-4">
@@ -573,3 +615,5 @@ function App() {
     </div>
   );
 }
+
+export default App;
