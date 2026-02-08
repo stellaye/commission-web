@@ -180,7 +180,7 @@ function App() {
   const handleLogin = () => {
     setLoading(true);
     try {
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${WX_CONFIG.state}#wechat_redirect`;
+      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_MP_APP_ID}&redirect_uri=...&scope=snsapi_userinfo&state=wx_mobile_state_xxx#wechat_redirect`;
 
       console.log('跳转到微信授权页面');
       window.location.href = authUrl;
@@ -195,14 +195,13 @@ function App() {
   const handleWxCodeToUserInfo = async (code) => {
     setLoading(true);
     console.log('开始用code换取用户信息');
-
+    const state = getUrlParam('state');
+    const loginType = state?.includes('mobile') ? 'mobile' : 'pc';
     try {
-      const response = await fetch('/api/wechat/login', {
+      const response = await fetch('/wanxiang/api/wechat/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, login_type: loginType }),
       });
 
       const data = await response.json();
@@ -226,6 +225,7 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
+
 
   // 复制推广链接
   const copyLink = (id) => {
@@ -437,8 +437,8 @@ function App() {
                 <button
                   onClick={() => copyLink(item.id)}
                   className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id
-                      ? 'bg-green-500 text-white'
-                      : 'bg-green-50 text-green-600 hover:bg-green-100'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-green-50 text-green-600 hover:bg-green-100'
                     }`}
                 >
                   {copiedId === item.id ? (
