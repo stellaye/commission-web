@@ -39,7 +39,6 @@ function App() {
   const [loginMode, setLoginMode] = useState('mobile'); // 'mobile' | 'qrcode'
   const [wxLoginReady, setWxLoginReady] = useState(false);
   const [isOnMobileDevice, setIsOnMobileDevice] = useState(true);
-  const [loginType, setLoginType] = useState(null); // 'mobile' 或 'web' - 记录用户是通过哪种方式登录的
 
   const wxLoginContainerRef = useRef(null);
   const wxScriptRef = useRef(null);
@@ -67,9 +66,7 @@ function App() {
 
     if (code && state && state.includes('wx_login_state_')) {
       console.log('检测到微信授权回调，code:', code);
-      // 从state中判断是PC端还是移动端
-      const isMobile = state.includes('mobile');
-      handleWxCodeToUserInfo(code, isMobile);
+      handleWxCodeToUserInfo(code);
     }
   }, []);
 
@@ -150,7 +147,7 @@ function App() {
         appid: WX_CONFIG.appId,
         scope: WX_CONFIG.scope,
         redirect_uri: encodeURIComponent(WX_CONFIG.redirectUri),
-        state: WX_CONFIG.state, // PC端使用默认state
+        state: WX_CONFIG.state,
         style: "black",
         fast_login: 1,
         color_scheme: "auto",
@@ -183,10 +180,7 @@ function App() {
   const handleLogin = () => {
     setLoading(true);
     try {
-      // 生成手机端专用的state
-      const mobileState = 'wx_login_state_mobile_' + Math.random().toString(36).substr(2, 10);
-      // 使用微信开放平台的OAuth2.0授权
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=${WX_CONFIG.scope}&state=${mobileState}#wechat_redirect`;
+      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_MP_APP_ID}&redirect_uri=...&scope=snsapi_userinfo&state=wx_mobile_state_xxx#wechat_redirect`;
 
       console.log('跳转到微信授权页面');
       window.location.href = authUrl;
@@ -198,18 +192,16 @@ function App() {
   };
 
   // 用code换取用户信息
-  const handleWxCodeToUserInfo = async (code, isMobile = false) => {
+  const handleWxCodeToUserInfo = async (code) => {
     setLoading(true);
-    console.log('开始用code换取用户信息，登录方式:', isMobile ? 'mobile' : 'web');
-
+    console.log('开始用code换取用户信息');
+    const state = getUrlParam('state');
+    const loginType = state?.includes('mobile') ? 'mobile' : 'pc';
     try {
       const response = await fetch('/wanxiang/api/wechat/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          login_type: isMobile ? 'mobile' : 'web' // 明确告诉后端登录方式
-        }),
+        body: JSON.stringify({ code, login_type: loginType }),
       });
 
       const data = await response.json();
@@ -219,14 +211,9 @@ function App() {
         setUser({
           nickname: data.user.nickname || '微信用户',
           avatar: data.user.headimgurl || data.user.avatar || 'https://via.placeholder.com/100',
-          id: data.user.openid,
-          openid: data.user.openid, // 保存openid
-          unionid: data.user.unionid // 保存unionid（如果可用）
+          id: data.user.openid
         });
-
-        // 记录登录方式
-        setLoginType(isMobile ? 'mobile' : 'web');
-        console.log('登录成功，登录方式:', isMobile ? 'mobile' : 'web');
+        console.log('登录成功');
       } else {
         alert('微信登录失败：' + (data.msg || '未知错误'));
       }
@@ -235,10 +222,10 @@ function App() {
       alert('网络错误，请重试');
     } finally {
       setLoading(false);
-      // 清除URL中的code参数，避免重复处理
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
+
 
   // 复制推广链接
   const copyLink = (id) => {
@@ -249,9 +236,8 @@ function App() {
   };
 
   // 处理提现
-  const handleWithdraw = async () => {
+  const handleWithdraw = () => {
     const amount = withdrawType === 'all' ? balance : parseFloat(withdrawAmount);
-
     if (!amount || amount <= 0) {
       alert('请输入有效金额');
       return;
@@ -260,41 +246,10 @@ function App() {
       alert('余额不足');
       return;
     }
-
-    try {
-      setLoading(true);
-
-      // 调用后端提现接口，传递登录方式
-      const response = await fetch('/wanxiang/api/withdraw', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // 如果有token的话
-        },
-        body: JSON.stringify({
-          amount: amount,
-          openid: user.openid, // 用户openid
-          login_type: loginType, // 登录方式：'mobile' 或 'web'
-          nickname: user.nickname // 可选：用户昵称
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert(`提现申请已提交！\n金额：¥${amount.toFixed(2)}\n预计1-3个工作日到账微信零钱`);
-        setBalance(prev => prev - amount);
-        setShowWithdraw(false);
-        setWithdrawAmount('');
-      } else {
-        alert('提现失败：' + (data.msg || '未知错误'));
-      }
-    } catch (error) {
-      console.error('提现请求失败:', error);
-      alert('网络错误，请重试');
-    } finally {
-      setLoading(false);
-    }
+    alert(`提现申请已提交！\n金额：¥${amount.toFixed(2)}\n预计1-3个工作日到账微信零钱`);
+    setBalance(prev => prev - amount);
+    setShowWithdraw(false);
+    setWithdrawAmount('');
   };
 
   // 登录页面
@@ -381,6 +336,7 @@ function App() {
       </div>
     );
   }
+
   // 主页面（登录后）
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">
@@ -573,3 +529,5 @@ function App() {
     </div>
   );
 }
+
+export default App;
