@@ -55,19 +55,34 @@ function App() {
 
   // 从URL中获取参数
   const getUrlParam = (name) => {
-    const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`);
-    const r = window.location.search.substr(1).match(reg);
-    return r ? decodeURIComponent(r[2]) : null;
+    const reg = new RegExp(`(^|[&?])${name}=([^&]*)(&|$)`);
+    // 先从 search 中找
+    let r = window.location.search.substr(1).match(reg);
+    if (r) return decodeURIComponent(r[2]);
+    // 再从 hash 中找（兼容 hash 路由）
+    const hashQuery = window.location.hash.split('?')[1];
+    if (hashQuery) {
+      r = hashQuery.match(reg);
+      if (r) return decodeURIComponent(r[2]);
+    }
+    return null;
   };
 
   // 处理微信授权回调
   useEffect(() => {
+    // 调试：打印完整URL信息
+    console.log('当前完整URL:', window.location.href);
+    console.log('search部分:', window.location.search);
+    console.log('hash部分:', window.location.hash);
+
     const code = getUrlParam('code');
     const state = getUrlParam('state');
 
+    console.log('解析到的code:', code);
+    console.log('解析到的state:', state);
+
     if (code && state && state.includes('wx_login_state_')) {
       console.log('检测到微信授权回调，code:', code);
-      // 从state中判断是PC端还是移动端
       const isMobile = state.includes('mobile');
       handleWxCodeToUserInfo(code, isMobile);
     }
@@ -221,7 +236,7 @@ function App() {
           localStorage.setItem('token', data.token);
           console.log('Token已保存到localStorage');
         }
-        
+
         setUser({
           nickname: data.user.nickname || '微信用户',
           avatar: data.user.headimgurl || data.user.avatar || 'https://via.placeholder.com/100',
