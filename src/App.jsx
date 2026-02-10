@@ -186,7 +186,7 @@ function App() {
       // 生成手机端专用的state
       const mobileState = 'wx_login_state_mobile_' + Math.random().toString(36).substr(2, 10);
       // 使用微信开放平台的OAuth2.0授权
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${WX_CONFIG.appId}&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${mobileState}#wechat_redirect`;
+      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx50afdd19b43f590e&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${mobileState}#wechat_redirect`;
 
       console.log('跳转到微信授权页面');
       window.location.href = authUrl;
