@@ -55,17 +55,9 @@ function App() {
 
   // 从URL中获取参数
   const getUrlParam = (name) => {
-    const reg = new RegExp(`(^|[&?])${name}=([^&]*)(&|$)`);
-    // 先从 search 中找
-    let r = window.location.search.substr(1).match(reg);
-    if (r) return decodeURIComponent(r[2]);
-    // 再从 hash 中找（兼容 hash 路由）
-    const hashQuery = window.location.hash.split('?')[1];
-    if (hashQuery) {
-      r = hashQuery.match(reg);
-      if (r) return decodeURIComponent(r[2]);
-    }
-    return null;
+    const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`);
+    const r = window.location.search.substr(1).match(reg);
+    return r ? decodeURIComponent(r[2]) : null;
   };
 
   // 处理微信授权回调
@@ -227,7 +219,21 @@ function App() {
         }),
       });
 
-      const data = await response.json();
+      // 先拿到原始文本，看看后端到底返回了什么
+      const rawText = await response.text();
+      console.log('响应状态码:', response.status);
+      console.log('响应原始内容:', rawText);
+
+      // 再尝试解析JSON
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        console.error('JSON解析失败，后端返回的不是JSON:', rawText.substring(0, 500));
+        alert('服务器返回格式错误，请检查后端接口');
+        return;
+      }
+
       console.log('后端返回数据:', data);
 
       if (data.success && data.user) {
