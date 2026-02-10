@@ -60,7 +60,7 @@ function App() {
         const mobileState = 'wx_login_state_mobile_' + Math.random().toString(36).substr(2, 10);
         const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx50afdd19b43f590e&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${mobileState}#wechat_redirect`;
         console.log('实际跳转URL:', authUrl);
-        alert(authUrl); // 方便在手机上看
+        // alert(authUrl); // 方便在手机上看
         window.location.href = authUrl;
       } else {
         setLoading(false);
