@@ -80,6 +80,41 @@ function App() {
     }
   }, []);
 
+
+  // 在 App 组件里新增：初始化微信JSSDK
+  const initWxJSSDK = async () => {
+    try {
+      const res = await fetch('/wanxiang/api/wechat/jsapi_signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: window.location.href.split('#')[0] })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        console.error('获取JSSDK签名失败:', data.msg);
+        return;
+      }
+
+      window.wx.config({
+        debug: false,
+        appId: 'wx50afdd19b43f590e',
+        timestamp: data.timestamp,
+        nonceStr: data.nonceStr,
+        signature: data.signature,
+        jsApiList: ['requestMerchantTransfer'],
+      });
+
+      window.wx.ready(() => {
+        console.log('微信JSSDK初始化成功');
+      });
+      window.wx.error((err) => {
+        console.error('微信JSSDK初始化失败:', err);
+      });
+    } catch (e) {
+      console.error('JSSDK签名请求失败:', e);
+    }
+  };
+
   // PC端：加载微信登录SDK并初始化（仅在扫码模式下）
   useEffect(() => {
     if (loginMode !== 'qrcode' || user) {
@@ -253,6 +288,9 @@ function App() {
 
         // 记录登录方式
         setLoginType(isMobile ? 'mobile' : 'web');
+        if (isMobile) {
+          initWxJSSDK();
+        }
         console.log('登录成功，登录方式:', isMobile ? 'mobile' : 'web');
       } else {
         alert('微信登录失败：' + (data.msg || '未知错误'));
@@ -277,75 +315,98 @@ function App() {
 
   // 处理提现 - 修复核心逻辑
   const handleWithdraw = async () => {
-    // 关键修复2：增加参数校验和日志打印
-    console.log('开始处理提现请求');
     const amount = withdrawType === 'all' ? balance : parseFloat(withdrawAmount);
-
-    // 更严格的参数校验
-    if (isNaN(amount) || amount <= 0) {
-      alert('请输入有效的提现金额（大于0）');
-      return;
-    }
-    if (amount > balance) {
-      alert('提现金额不能超过可用余额');
-      return;
-    }
-    if (!user?.openid) {
-      alert('用户信息不完整，请重新登录');
-      return;
-    }
+    if (isNaN(amount) || amount <= 0) { alert('请输入有效金额'); return; }
+    if (amount > balance) { alert('金额超过余额'); return; }
+    if (!user?.openid) { alert('用户信息不完整，请重新登录'); return; }
 
     try {
       setLoading(true);
-      console.log('准备发送提现请求，金额:', amount);
-
-      // 构建请求头
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-      // 只有存在token时才添加Authorization头
+      const headers = { 'Content-Type': 'application/json' };
       const token = localStorage.getItem('token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('请求头已添加Authorization token');
-      } else {
-        console.warn('未找到登录token，请求将不携带Authorization头');
-      }
+      if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      // 调用后端提现接口，传递登录方式
       const response = await fetch('/wanxiang/api/withdraw', {
         method: 'POST',
-        headers: headers,
+        headers,
         body: JSON.stringify({
-          amount: amount,
-          openid: user.openid, // 用户openid
-          login_type: loginType, // 登录方式：'mobile' 或 'web'
-          nickname: user.nickname // 可选：用户昵称
+          amount,
+          openid: user.openid,
+          login_type: loginType,
+          nickname: user.nickname
         }),
       });
 
-      // 关键修复3：打印完整的响应信息
-      console.log('提现请求响应状态:', response.status);
-      const data = await response.json();
-      console.log('提现请求响应数据:', data);
+      const rawText = await response.text();
+      console.log('提现响应:', response.status, rawText);
 
-      if (data.success) {
-        alert(`提现申请已提交！\n金额：¥${amount.toFixed(2)}\n预计1-3个工作日到账微信零钱`);
+      let data;
+      try { data = JSON.parse(rawText); } catch {
+        alert('服务器返回格式错误');
+        setLoading(false);
+        return;
+      }
+
+      if (data.success && data.direct) {
+        // 免确认模式，直接成功
+        alert('提现成功！已到账微信零钱');
         setBalance(prev => prev - amount);
         setShowWithdraw(false);
         setWithdrawAmount('');
+      } else if (data.success && data.package_info) {
+        // 需要用户确认收款 - 调用微信JSAPI
+        console.log('拉起用户确认收款页面');
+
+        // 先检查是否支持
+        window.wx.checkJsApi({
+          jsApiList: ['requestMerchantTransfer'],
+          success: function (checkRes) {
+            console.log('checkJsApi结果:', checkRes);
+            if (checkRes.checkResult && checkRes.checkResult.requestMerchantTransfer) {
+              // 调用 WeixinJSBridge 拉起确认收款
+              WeixinJSBridge.invoke(
+                'requestMerchantTransfer',
+                {
+                  mchId: data.mch_id,
+                  appId: data.app_id,
+                  package: data.package_info,
+                },
+                function (res) {
+                  console.log('确认收款结果:', res);
+                  if (res.err_msg === 'requestMerchantTransfer:ok') {
+                    alert('收款成功！');
+                    setBalance(prev => prev - amount);
+                    setShowWithdraw(false);
+                    setWithdrawAmount('');
+                  } else if (res.err_msg === 'requestMerchantTransfer:cancel') {
+                    alert('您已取消收款，可稍后重试');
+                  } else {
+                    alert('收款失败：' + res.err_msg);
+                  }
+                  setLoading(false);
+                }
+              );
+            } else {
+              alert('您的微信版本过低，请更新至最新版本');
+              setLoading(false);
+            }
+          },
+          fail: function () {
+            alert('微信接口检查失败，请重试');
+            setLoading(false);
+          }
+        });
+        return; // 这里return，不要在finally里setLoading(false)
       } else {
         alert('提现失败：' + (data.msg || '未知错误'));
       }
     } catch (error) {
-      // 关键修复4：详细捕获并打印异常
-      console.error('提现请求失败详情:', error);
-      alert(`提现请求出错：${error.message || '网络异常，请检查网络连接'}`);
+      console.error('提现失败:', error);
+      alert('请求失败：' + error.message);
     } finally {
       setLoading(false);
     }
   };
-
   // 登录页面
   if (!user) {
     return (
