@@ -44,6 +44,33 @@ function App() {
   const wxLoginContainerRef = useRef(null);
   const wxScriptRef = useRef(null);
   const isWxLoginInitialized = useRef(false);
+  // 在 App 组件内新增 state
+  const [showWxGuide, setShowWxGuide] = useState(false);
+
+  // 判断是否在微信内置浏览器中
+  const isWeChatBrowser = () => {
+    return /MicroMessenger/i.test(navigator.userAgent);
+  };
+
+  // 修改后的 handleLogin
+  const handleLogin = () => {
+    setLoading(true);
+    try {
+      if (isWeChatBrowser()) {
+        const mobileState = 'wx_login_state_mobile_' + Math.random().toString(36).substr(2, 10);
+        const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx50afdd19b43f590e&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${mobileState}#wechat_redirect`;
+        window.location.href = authUrl;
+      } else {
+        setLoading(false);
+        setShowWxGuide(true);
+      }
+    } catch (error) {
+      console.error('微信登录跳转失败:', error);
+      setLoading(false);
+      alert('登录失败，请重试');
+    }
+  };
+
 
   // 检测设备类型（只在挂载时检测一次）
   useEffect(() => {
@@ -218,24 +245,6 @@ function App() {
     if (mode === 'qrcode') {
       setWxLoginReady(false);
       isWxLoginInitialized.current = false;
-    }
-  };
-
-  // 手机端：跳转到微信授权页面
-  const handleLogin = () => {
-    setLoading(true);
-    try {
-      // 生成手机端专用的state
-      const mobileState = 'wx_login_state_mobile_' + Math.random().toString(36).substr(2, 10);
-      // 使用微信开放平台的OAuth2.0授权
-      const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx50afdd19b43f590e&redirect_uri=${encodeURIComponent(WX_CONFIG.redirectUri)}&response_type=code&scope=snsapi_userinfo&state=${mobileState}#wechat_redirect`;
-
-      console.log('跳转到微信授权页面');
-      window.location.href = authUrl;
-    } catch (error) {
-      console.error('微信登录跳转失败:', error);
-      setLoading(false);
-      alert('登录失败，请重试');
     }
   };
 
@@ -488,6 +497,77 @@ function App() {
             登录即表示同意《用户协议》和《隐私政策》
           </p>
         </div>
+
+        {/* 微信引导弹窗 */}
+        {showWxGuide && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 relative">
+              <button
+                onClick={() => setShowWxGuide(false)}
+                className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-full transition"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg viewBox="0 0 24 24" className="w-8 h-8 fill-green-500">
+                    <path d="M8.5 2C4.4 2 1 5.1 1 9c0 2.1 1.1 4 2.8 5.3.1.1.2.3.1.4l-.4 1.4c0 .1 0 .2.1.3.1.1.2.1.3.1h.2l1.8-1.1c.2-.1.4-.1.5 0 .7.2 1.4.3 2.1.3.3 0 .5 0 .8-.1-.2-.5-.3-1.1-.3-1.6 0-3.4 3.1-6.2 7-6.2.3 0 .5 0 .8.1C16.4 4.6 12.8 2 8.5 2zm-3 5.5c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5 0c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm5.5 2.3c-3.4 0-6.2 2.4-6.2 5.4s2.8 5.4 6.2 5.4c.6 0 1.2-.1 1.8-.2.2 0 .3 0 .5.1l1.4.8h.1c.1 0 .2-.1.2-.2v-.1l-.3-1.1c0-.2 0-.3.1-.4 1.4-1 2.3-2.6 2.3-4.3.1-3-2.7-5.4-6.1-5.4zm-2.5 4.3c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8zm4.8 0c-.5 0-.8-.4-.8-.8s.4-.8.8-.8.8.4.8.8-.3.8-.8.8z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-gray-800">请在微信中打开</h3>
+                <p className="text-gray-500 text-sm mt-2">
+                  微信登录需要在微信内置浏览器中使用，请按以下步骤操作
+                </p>
+              </div>
+
+              {/* 步骤说明 */}
+              <div className="space-y-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <p className="text-sm text-gray-600">点击下方按钮复制当前页面链接</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <p className="text-sm text-gray-600">打开<span className="font-bold text-green-600">微信</span>，在任意聊天窗口中粘贴链接并发送</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  <p className="text-sm text-gray-600">点击链接即可在微信中打开并完成登录</p>
+                </div>
+              </div>
+
+              {/* 复制链接按钮 */}
+              <button
+                onClick={() => {
+                  const url = window.location.href.split('?')[0]; // 去掉多余参数
+                  navigator.clipboard.writeText(url).then(() => {
+                    alert('链接已复制，请打开微信粘贴到聊天中');
+                  }).catch(() => {
+                    // clipboard API 不可用时用 fallback
+                    const input = document.createElement('input');
+                    input.value = url;
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                    alert('链接已复制，请打开微信粘贴到聊天中');
+                  });
+                }}
+                className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition"
+              >
+                <Copy size={18} /> 复制链接
+              </button>
+
+              <button
+                onClick={() => setShowWxGuide(false)}
+                className="w-full text-gray-400 text-sm mt-3 py-2"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
