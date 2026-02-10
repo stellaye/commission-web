@@ -502,6 +502,7 @@ function App() {
               {debugInfo}
             </div>
           )}
+          <p> hello !!!</p>
           <p className="text-center text-gray-400 text-xs mt-6">
             登录即表示同意《用户协议》和《隐私政策》
           </p>
