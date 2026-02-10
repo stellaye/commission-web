@@ -54,7 +54,9 @@ function App() {
 
   // 修改后的 handleLogin
   const handleLogin = () => {
-    alert('UA: ' + navigator.userAgent);
+    const ua = navigator.userAgent;
+    const isWx = /MicroMessenger/i.test(ua);
+    setDebugInfo(`UA: ${ua}\n\n是否微信: ${isWx}\n\nloginMode: ${loginMode}\n\nisOnMobile: ${isOnMobileDevice}`);
     setLoading(true);
     try {
       if (isWeChatBrowser()) {
@@ -495,7 +497,11 @@ function App() {
               </p>
             </div>
           )}
-
+          {debugInfo && (
+            <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs text-gray-600 break-all whitespace-pre-wrap">
+              {debugInfo}
+            </div>
+          )}
           <p className="text-center text-gray-400 text-xs mt-6">
             登录即表示同意《用户协议》和《隐私政策》
           </p>
