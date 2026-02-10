@@ -54,6 +54,7 @@ function App() {
 
   // 修改后的 handleLogin
   const handleLogin = () => {
+    alert('UA: ' + navigator.userAgent);
     setLoading(true);
     try {
       if (isWeChatBrowser()) {
