@@ -19,7 +19,7 @@ const calcLinks = [
 const WX_CONFIG = {
   appId: 'wxd642d4eeae08b232',
   redirectUri: "https://stellarsmart.cn/commission_web/",
-  scope: 'snsapi_base',
+  scope: 'snsapi_login',
   state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10)
 };
 
