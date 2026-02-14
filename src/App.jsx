@@ -271,6 +271,10 @@ function App() {
   };
 
   const handleWithdraw = async () => {
+    if (!isWeChatBrowser()) {
+      setShowWxGuide(true);  // 复用你已有的引导弹窗
+      return;
+    }
     const balanceYuan = dashboard.balance / 100;
     const targetAmount = withdrawType === 'all' ? balanceYuan : parseFloat(withdrawAmount);
     if (isNaN(targetAmount) || targetAmount <= 0) { alert('请输入有效金额'); return; }
