@@ -355,17 +355,16 @@ function App() {
     // 计算需要分几次提现
     const times = Math.ceil(targetAmount / WITHDRAW_LIMITS.singleMax);
     
-    if (times > 1 && currentWithdrawStep === 0) {
-      // 首次点击，显示分批提现说明
+    // 如果是首次点击且需要分批，先设置状态但继续执行第一笔
+    if (withdrawTimes === 1 && times > 1) {
       setWithdrawTimes(times);
-      setCurrentWithdrawStep(0);
-      return;
     }
 
     // 执行提现
-    const isLastWithdraw = currentWithdrawStep === times - 1;
+    const stepToExecute = withdrawTimes > 1 ? currentWithdrawStep : 0;
+    const isLastWithdraw = stepToExecute === times - 1;
     const currentAmount = isLastWithdraw 
-      ? targetAmount - (currentWithdrawStep * WITHDRAW_LIMITS.singleMax) // 最后一笔：剩余金额
+      ? targetAmount - (stepToExecute * WITHDRAW_LIMITS.singleMax) // 最后一笔：剩余金额
       : WITHDRAW_LIMITS.singleMax; // 非最后一笔：单笔限额
 
     try {
