@@ -21,6 +21,8 @@ const fenToYuan = (fen) => (fen / 100).toFixed(2);
 
 function App() {
   const [user, setUser] = useState(null);
+  const [showFailDialog, setShowFailDialog] = useState(false);
+  const [failMsg, setFailMsg] = useState('');
   const [copiedId, setCopiedId] = useState(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -318,16 +320,31 @@ function App() {
                     setCurrentWithdrawStep(prev => prev + 1); fetchDashboard(user.openid, loginType);
                   }
                 } else if (res.err_msg === 'requestMerchantTransfer:cancel') { alert('您已取消收款，可稍后重试'); resetW(); }
-                else { alert('收款失败：' + res.err_msg); resetW(); }
+                else {
+                  setFailMsg(res.err_msg || '收款异常');
+                  setShowFailDialog(true); resetW();
+                }
                 setLoading(false);
               });
-            } else { alert('您的微信版本过低，请更新至最新版本'); setLoading(false); }
+            } else {
+              setFailMsg('您的微信版本过低，请更新至最新版本');
+              setShowFailDialog(true); setLoading(false);
+            }
           },
-          fail: () => { alert('微信接口检查失败'); setLoading(false); }
+          fail: () => {
+            setFailMsg('微信接口检查失败');
+            setShowFailDialog(true); setLoading(false);
+          }
         });
         return;
-      } else { alert('提现失败：' + (data.msg || '未知错误')); resetW(); }
-    } catch (e) { console.error('提现失败:', e); alert('请求失败：' + e.message); resetW(); }
+      } else {
+        setFailMsg(data.msg || '未知错误');
+        setShowFailDialog(true); resetW();
+      }
+    } catch (e) {
+      console.error('提现失败:', e); setFailMsg('请求失败：' + e.message);
+      setShowFailDialog(true); resetW();
+    }
     finally { setLoading(false); }
   };
 
@@ -528,7 +545,7 @@ function App() {
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-xs text-gray-400">当前售价 ¥{fenToYuan(item.active_price)}</span>
                               <span className="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded">佣金 ¥{fenToYuan(item.commission)}</span>
-                              {item.custom_price && <span className="text-xs bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">已定价</span>}
+                              {/* {item.custom_price && <span className="text-xs bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">已定价</span>} */}
                             </div>
                           </div>
                         </div>
@@ -801,6 +818,45 @@ function App() {
             <p className="text-center text-gray-400 text-xs mt-4">
               {withdrawTimes > 1 ? '微信单笔限额，需分批确认，每次确认后会自动到账' : '提现将即时到账微信零钱'}
             </p>
+          </div>
+        </div>
+      )}
+
+      {showFailDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 text-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <X size={28} className="text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">提现失败</h3>
+            <p className="text-gray-500 text-sm mb-4">{failMsg}</p>
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <p className="text-gray-400 text-xs mb-2">请联系客服微信</p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-lg font-bold text-gray-800">woodwithyrj</span>
+                <button onClick={() => {
+                  navigator.clipboard.writeText('woodwithyrj').then(() => {
+                    setCopiedId('wx_service');
+                    setTimeout(() => setCopiedId(null), 2000);
+                  }).catch(() => {
+                    const inp = document.createElement('input');
+                    inp.value = 'woodwithyrj';
+                    document.body.appendChild(inp);
+                    inp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(inp);
+                    setCopiedId('wx_service');
+                    setTimeout(() => setCopiedId(null), 2000);
+                  });
+                }} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition ${copiedId === 'wx_service' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
+                  {copiedId === 'wx_service' ? <><Check size={14} />已复制</> : <><Copy size={14} />复制</>}
+                </button>
+              </div>
+            </div>
+            <button onClick={() => setShowFailDialog(false)}
+              className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-200 transition">
+              我知道了
+            </button>
           </div>
         </div>
       )}
