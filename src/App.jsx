@@ -342,7 +342,7 @@ function App() {
       const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T'));
       if (isNaN(d.getTime())) return ts;
       const pad = n => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch { return ts; }
   };
 
@@ -413,7 +413,7 @@ function App() {
               <div className="space-y-4 mb-6">
                 {['点击下方按钮复制当前页面链接', <span key="s">打开<span className="font-bold text-green-600">微信</span>，在聊天窗口中粘贴链接并发送</span>, '点击链接即可在微信中打开并完成登录'].map((t, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{i+1}</span>
+                    <span className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</span>
                     <p className="text-sm text-gray-600">{t}</p>
                   </div>
                 ))}
@@ -502,9 +502,8 @@ function App() {
           <div className="flex border-b">
             {tabs.map(tab => (
               <button key={tab.key} onClick={() => handleTabChange(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-medium transition-all relative ${
-                  activeTab === tab.key ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'
-                }`}>
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-medium transition-all relative ${activeTab === tab.key ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
                 {tab.icon} {tab.label}
                 {activeTab === tab.key && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-green-500 rounded-full" />}
               </button>
@@ -514,7 +513,8 @@ function App() {
           {/* ===== 推广链接 Tab ===== */}
           {activeTab === 'products' && (
             <>
-              <div className="p-4 border-b bg-gray-50">
+              {/* 【修复】去掉 border-b，改用更柔和的样式 */}
+              <div className="p-4 bg-gray-50">
                 <p className="text-gray-400 text-xs">点击复制链接分享给好友 · 可自定义售价提高收益</p>
               </div>
               {dataLoading ? (
@@ -525,9 +525,11 @@ function App() {
               ) : products.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm">暂无产品</div>
               ) : (
-                <div className="divide-y">
+                // 【修复】去掉 divide-y，改用 gap 间距
+                <div className="p-4 space-y-3">
                   {products.map(item => (
-                    <div key={item.id} className="p-4">
+                    // 【修复】每个产品用圆角卡片，去掉分割线
+                    <div key={item.id} className="bg-gray-50 rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <span className="text-2xl flex-shrink-0">{item.icon}</span>
@@ -547,18 +549,18 @@ function App() {
                               setEditingPrice(item.id);
                               setPriceInput(item.custom_price ? (item.custom_price / 100).toString() : (item.recommended_price / 100).toString());
                             }
-                          }} className="p-2 rounded-full text-gray-400 hover:bg-gray-100 transition" title="自定义价格">
+                          }} className="p-2 rounded-full text-gray-400 hover:bg-white transition" title="自定义价格">
                             {editingPrice === item.id ? <ChevronUp size={16} /> : <Edit3 size={16} />}
                           </button>
                           <button onClick={() => copyLink(item)}
-                            className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id ? 'bg-green-500 text-white' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
+                            className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id ? 'bg-green-500 text-white' : 'bg-white text-green-600 hover:bg-green-50'}`}>
                             {copiedId === item.id ? <><Check size={16} />已复制</> : <><Copy size={16} />复制</>}
                           </button>
                         </div>
                       </div>
                       {editingPrice === item.id && (
-                        <div className="mt-3 pt-3 border-t border-dashed">
-                          <div className="bg-gray-50 rounded-xl p-4">
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="bg-white rounded-xl p-4">
                             <p className="text-xs text-gray-500 mb-3">
                               价格范围：¥{fenToYuan(item.base_price)}（保底价）~ ¥{fenToYuan(item.max_price)}（最高价），推荐价 ¥{fenToYuan(item.recommended_price)}
                             </p>
@@ -714,10 +716,12 @@ function App() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-800 text-sm">提现到微信零钱</p>
-                          <p className="text-gray-400 text-xs mt-0.5">{formatTime(w.created_at)}</p>
+                          {/* 【修复】显示提现时间，没有时间则显示"处理中" */}
+                          <p className="text-gray-400 text-xs mt-0.5">{w.created_at ? formatTime(w.created_at) : '处理中'}</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-3">
+                        {/* 【修复】金额单位是分，fenToYuan 转元 */}
                         <p className="text-sm font-bold text-orange-600">-¥{fenToYuan(w.amount)}</p>
                         <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">已到账</span>
                       </div>
