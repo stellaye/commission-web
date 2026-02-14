@@ -272,7 +272,7 @@ function App() {
 
   const handleWithdraw = async () => {
     if (!isWeChatBrowser()) {
-      setFailMsg('提现收款需要在微信中完成，请在微信中打开本页面');
+      setFailMsg('请在微信浏览器中打开本网站进行提现');
       setShowFailDialog(true);
       return;
     }
