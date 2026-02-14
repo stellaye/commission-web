@@ -67,6 +67,15 @@ function App() {
 
   const isWeChatBrowser = () => /MicroMessenger/i.test(navigator.userAgent);
 
+
+
+  const pollDashboard = (openid, lt, retries = 3, delay = 2000) => {
+    // 多次延迟刷新，等待服务端收到微信回调后余额更新
+    for (let i = 1; i <= retries; i++) {
+      setTimeout(() => fetchDashboard(openid, lt), delay * i);
+    }
+  };
+
   const fetchDashboard = async (openid, lt) => {
     try {
       const res = await fetch(`/wanxiang/api/dashboard?openid=${encodeURIComponent(openid)}&login_type=${lt}`);
@@ -278,9 +287,25 @@ function App() {
 
     const resetW = () => { setCurrentWithdrawStep(0); setWithdrawTimes(1); };
     const closeW = () => { setShowWithdraw(false); setWithdrawAmount(''); resetW(); };
-    const refreshAfterWithdraw = () => {
+    const refreshAfterWithdraw = (withdrawnAmountYuan) => {
+      // a) 立即乐观更新前端余额（不等服务端回调）
+      if (withdrawnAmountYuan) {
+        const deductFen = Math.round(withdrawnAmountYuan * 100);
+        setDashboard(prev => ({
+          ...prev,
+          balance: Math.max((prev.balance || 0) - deductFen, 0),
+        }));
+      }
+
+      // b) 立即拉一次（可能还没更新）
       fetchDashboard(user.openid, loginType);
-      if (withdrawals.length > 0 || activeTab === 'withdrawals') fetchWithdrawals(user.openid, loginType, 1);
+
+      // c) 延迟轮询 3 次（2s、4s、6s），确保拿到服务端最新数据
+      pollDashboard(user.openid, loginType, 3, 2000);
+
+      // d) 刷新提现记录
+      if (withdrawals.length > 0 || activeTab === 'withdrawals')
+        fetchWithdrawals(user.openid, loginType, 1);
     };
 
     try {
@@ -299,12 +324,15 @@ function App() {
 
       if (data.success && data.direct) {
         if (isLastWithdraw || times === 1) {
-          alert('提现成功！已到账微信零钱'); refreshAfterWithdraw(); closeW();
+          alert('提现成功！已到账微信零钱');
+          refreshAfterWithdraw(targetAmount); closeW();   // ← 传入总金额
         } else {
-          alert(`第 ${currentWithdrawStep + 1} 笔提现成功！请继续完成剩余 ${times - currentWithdrawStep - 1} 笔`);
-          setCurrentWithdrawStep(prev => prev + 1); fetchDashboard(user.openid, loginType);
+          alert(`第 ${currentWithdrawStep + 1} 笔提现成功！...`);
+          setCurrentWithdrawStep(prev => prev + 1);
+          refreshAfterWithdraw(currentAmount);             // ← 传入本笔金额
         }
-      } else if (data.success && data.package_info) {
+      }
+      else if (data.success && data.package_info) {
         window.wx.checkJsApi({
           jsApiList: ['requestMerchantTransfer'],
           success: (checkRes) => {
@@ -314,10 +342,12 @@ function App() {
               }, (res) => {
                 if (res.err_msg === 'requestMerchantTransfer:ok') {
                   if (isLastWithdraw || times === 1) {
-                    alert('收款成功！'); refreshAfterWithdraw(); closeW();
+                    alert('收款成功！');
+                    refreshAfterWithdraw(targetAmount); closeW();   // ← 传入总金额
                   } else {
-                    alert(`第 ${currentWithdrawStep + 1} 笔收款成功！请继续完成剩余 ${times - currentWithdrawStep - 1} 笔`);
-                    setCurrentWithdrawStep(prev => prev + 1); fetchDashboard(user.openid, loginType);
+                    alert(`第 ${currentWithdrawStep + 1} 笔收款成功！...`);
+                    setCurrentWithdrawStep(prev => prev + 1);
+                    refreshAfterWithdraw(currentAmount);             // ← 传入本笔金额
                   }
                 } else if (res.err_msg === 'requestMerchantTransfer:cancel') { alert('您已取消收款，可稍后重试'); resetW(); }
                 else {
