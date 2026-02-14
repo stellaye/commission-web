@@ -43,7 +43,6 @@ function App() {
   const [priceLoading, setPriceLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
 
-  // ===== 新增：Tab + 订单 + 提现记录 =====
   const [activeTab, setActiveTab] = useState('products');
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -66,7 +65,6 @@ function App() {
 
   const isWeChatBrowser = () => /MicroMessenger/i.test(navigator.userAgent);
 
-  // ===== 数据请求 =====
   const fetchDashboard = async (openid, lt) => {
     try {
       const res = await fetch(`/wanxiang/api/dashboard?openid=${encodeURIComponent(openid)}&login_type=${lt}`);
@@ -113,7 +111,6 @@ function App() {
     finally { setWithdrawalsLoading(false); }
   };
 
-  // Tab 切换懒加载
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'orders' && orders.length === 0 && user) {
@@ -151,7 +148,6 @@ function App() {
     setDataLoading(false);
   };
 
-  // ===== 微信登录 =====
   const handleLogin = () => {
     setLoading(true);
     try {
@@ -263,7 +259,6 @@ function App() {
     });
   };
 
-  // ===== 提现 =====
   const handleWithdraw = async () => {
     const balanceYuan = dashboard.balance / 100;
     const targetAmount = withdrawType === 'all' ? balanceYuan : parseFloat(withdrawAmount);
@@ -337,7 +332,7 @@ function App() {
   };
 
   const formatTime = (ts) => {
-    if (!ts) return '-';
+    if (!ts) return '';
     try {
       const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T'));
       if (isNaN(d.getTime())) return ts;
@@ -445,7 +440,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">
-      {/* 顶部 */}
       <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 pb-24 md:pb-28">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -466,7 +460,6 @@ function App() {
         </div>
       </div>
 
-      {/* 佣金卡片 */}
       <div className="max-w-3xl mx-auto px-4 -mt-20">
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -497,23 +490,21 @@ function App() {
           </div>
         </div>
 
-        {/* ===== Tab 区域 ===== */}
+        {/* Tab 区域 */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="flex border-b">
             {tabs.map(tab => (
               <button key={tab.key} onClick={() => handleTabChange(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-medium transition-all relative ${activeTab === tab.key ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'
-                  }`}>
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-medium transition-all relative ${activeTab === tab.key ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}>
                 {tab.icon} {tab.label}
                 {activeTab === tab.key && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-green-500 rounded-full" />}
               </button>
             ))}
           </div>
 
-          {/* ===== 推广链接 Tab ===== */}
+          {/* 推广链接 Tab */}
           {activeTab === 'products' && (
             <>
-              {/* 【修复】去掉 border-b，改用更柔和的样式 */}
               <div className="p-4 bg-gray-50">
                 <p className="text-gray-400 text-xs">点击复制链接分享给好友 · 可自定义售价提高收益</p>
               </div>
@@ -525,10 +516,8 @@ function App() {
               ) : products.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm">暂无产品</div>
               ) : (
-                // 【修复】去掉 divide-y，改用 gap 间距
                 <div className="p-4 space-y-3">
                   {products.map(item => (
-                    // 【修复】每个产品用圆角卡片，去掉分割线
                     <div key={item.id} className="bg-gray-50 rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -539,7 +528,7 @@ function App() {
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-xs text-gray-400">当前售价 ¥{fenToYuan(item.active_price)}</span>
                               <span className="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded">佣金 ¥{fenToYuan(item.commission)}</span>
-                              {item.custom_price && <span className="text-xs bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">自定义</span>}
+                              {item.custom_price && <span className="text-xs bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">已定价</span>}
                             </div>
                           </div>
                         </div>
@@ -592,10 +581,10 @@ function App() {
             </>
           )}
 
-          {/* ===== 成交订单 Tab ===== */}
+          {/* 成交订单 Tab — 去掉 divide-y，改用卡片间距 */}
           {activeTab === 'orders' && (
             <>
-              <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+              <div className="p-4 bg-gray-50 flex items-center justify-between">
                 <p className="text-gray-400 text-xs">共 {ordersTotal} 笔成交订单</p>
                 <button onClick={() => fetchOrders(user.openid, loginType, 1)} disabled={ordersLoading}
                   className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full hover:bg-green-200 transition flex items-center gap-1 disabled:opacity-50">
@@ -614,18 +603,18 @@ function App() {
                   <p className="text-gray-300 text-xs mt-1">分享推广链接，好友付款后即可获得佣金</p>
                 </div>
               ) : (
-                <div className="divide-y">
+                <div className="p-4 space-y-3">
                   {orders.map(order => (
-                    <div key={order.id} className="p-4">
+                    <div key={order.id} className="bg-gray-50 rounded-xl p-4">
                       <div className="flex items-center justify-between cursor-pointer"
                         onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-lg">{order.product_icon || '📦'}</span>
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-800 text-sm truncate">{order.product_name}</p>
-                            <p className="text-gray-400 text-xs mt-0.5">{formatTime(order.paid_at)}</p>
+                            <p className="text-gray-400 text-xs mt-0.5">{formatTime(order.paid_at) || '—'}</p>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0 ml-3">
@@ -635,8 +624,8 @@ function App() {
                         <ChevronDown size={16} className={`ml-2 text-gray-300 transition-transform flex-shrink-0 ${expandedOrder === order.id ? 'rotate-180' : ''}`} />
                       </div>
                       {expandedOrder === order.id && (
-                        <div className="mt-3 pt-3 border-t border-dashed">
-                          <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="bg-white rounded-xl p-3 space-y-2">
                             <div className="flex justify-between text-xs">
                               <span className="text-gray-400">订单编号</span>
                               <span className="text-gray-600 font-mono text-[11px]">{order.order_no}</span>
@@ -659,7 +648,7 @@ function App() {
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-gray-400">付款时间</span>
-                              <span className="text-gray-600">{formatTime(order.paid_at)}</span>
+                              <span className="text-gray-600">{formatTime(order.paid_at) || '—'}</span>
                             </div>
                             {order.buyer_nickname && (
                               <div className="flex justify-between text-xs">
@@ -673,7 +662,7 @@ function App() {
                     </div>
                   ))}
                   {ordersHasMore && (
-                    <div className="p-4 text-center">
+                    <div className="text-center pt-2">
                       <button onClick={() => fetchOrders(user.openid, loginType, ordersPage + 1, true)} disabled={ordersLoading}
                         className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50">
                         {ordersLoading ? '加载中...' : '加载更多'}
@@ -685,10 +674,10 @@ function App() {
             </>
           )}
 
-          {/* ===== 提现记录 Tab ===== */}
+          {/* 提现记录 Tab — 去掉 divide-y，改用卡片间距 */}
           {activeTab === 'withdrawals' && (
             <>
-              <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+              <div className="p-4 bg-gray-50 flex items-center justify-between">
                 <p className="text-gray-400 text-xs">共 {withdrawalsTotal} 笔成功提现</p>
                 <button onClick={() => fetchWithdrawals(user.openid, loginType, 1)} disabled={withdrawalsLoading}
                   className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full hover:bg-green-200 transition flex items-center gap-1 disabled:opacity-50">
@@ -707,28 +696,26 @@ function App() {
                   <p className="text-gray-300 text-xs mt-1">佣金满足条件后即可提现到微信零钱</p>
                 </div>
               ) : (
-                <div className="divide-y">
+                <div className="p-4 space-y-3">
                   {withdrawals.map(w => (
-                    <div key={w.id} className="p-4 flex items-center justify-between">
+                    <div key={w.id} className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center flex-shrink-0">
                           <Wallet size={18} className="text-orange-500" />
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-800 text-sm">提现到微信零钱</p>
-                          {/* 【修复】显示提现时间，没有时间则显示"处理中" */}
-                          <p className="text-gray-400 text-xs mt-0.5">{w.created_at ? formatTime(w.created_at) : '处理中'}</p>
+                          <p className="text-gray-400 text-xs mt-0.5">{formatTime(w.created_at) || '—'}</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-3">
-                        {/* 【修复】金额单位是分，fenToYuan 转元 */}
-                        <p className="text-sm font-bold text-orange-600">-¥{fenToYuan(w.amount)}</p>
+                        <p className="text-sm font-bold text-orange-600">¥{fenToYuan(w.amount)}</p>
                         <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">已到账</span>
                       </div>
                     </div>
                   ))}
                   {withdrawalsHasMore && (
-                    <div className="p-4 text-center">
+                    <div className="text-center pt-2">
                       <button onClick={() => fetchWithdrawals(user.openid, loginType, withdrawalsPage + 1, true)} disabled={withdrawalsLoading}
                         className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50">
                         {withdrawalsLoading ? '加载中...' : '加载更多'}
@@ -760,8 +747,7 @@ function App() {
                 <Wallet size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-orange-700">
                   <p className="font-medium mb-1">💡 提现限额说明</p>
-                  <p>• 单笔最高：¥{WITHDRAW_LIMITS.singleMax}</p>
-                  <p>• 单日最高：¥{WITHDRAW_LIMITS.dailyMax}</p>
+                  <p>单笔最高 ¥{WITHDRAW_LIMITS.singleMax}，单日最高 ¥{WITHDRAW_LIMITS.dailyMax}</p>
                 </div>
               </div>
             </div>
