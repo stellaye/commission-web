@@ -202,6 +202,27 @@ function App() {
     } catch (e) { console.error('JSSDK签名请求失败:', e); }
   };
 
+
+  useEffect(() => {
+    const stored = localStorage.getItem('user_info');
+    const lt = localStorage.getItem('login_type');
+    if (stored && lt) {
+      try {
+        const u = JSON.parse(stored);
+        if (u.openid) {
+          setUser(u);
+          setLoginType(lt);
+          if (lt === 'mobile') initWxJSSDK();
+          loadUserData(u.openid, lt);
+        }
+      } catch (e) {
+        localStorage.removeItem('user_info');
+        localStorage.removeItem('login_type');
+      }
+    }
+  }, []);
+
+
   useEffect(() => {
     if (loginMode !== 'qrcode' || user) return;
     if (isWxLoginInitialized.current) return;
@@ -252,6 +273,8 @@ function App() {
           refcode: data.user.refcode || data.user.ref_code,
         };
         setUser(newUser); setLoginType(lt);
+        localStorage.setItem('user_info', JSON.stringify(newUser));
+        localStorage.setItem('login_type', lt);
         if (isMobile) initWxJSSDK();
         loadUserData(newUser.openid, lt);
       } else { alert('微信登录失败：' + (data.msg || '未知错误')); }
@@ -505,6 +528,8 @@ function App() {
             <button onClick={() => {
               setUser(null); setWxLoginReady(false); isWxLoginInitialized.current = false;
               localStorage.removeItem('token');
+              localStorage.removeItem('user_info');
+              localStorage.removeItem('login_type');
               setDashboard({ balance: 0, total_earnings: 0, order_count: 0, referral_count: 0 });
               setProducts([]); setOrders([]); setWithdrawals([]); setActiveTab('products');
             }} className="p-2 hover:bg-white/20 rounded-full transition"><LogOut size={20} /></button>
