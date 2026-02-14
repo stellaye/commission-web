@@ -462,6 +462,9 @@ function App() {
                 <div id="wx_login_container" ref={wxLoginContainerRef} className="min-h-[280px]" />
               </div>
               <p className="text-gray-500 text-sm">请使用微信扫一扫登录</p>
+              <p className="text-green-600 text-xs mt-2 font-medium">
+                💡 已登录微信客户端可快速登录，无需扫码
+              </p>
             </div>
           )}
 
