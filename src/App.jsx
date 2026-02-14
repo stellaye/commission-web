@@ -3,6 +3,13 @@ import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, 
 
 const baseLink = "https://stellarsmart.cn/wanxiang_institute/";
 
+// 提现限额配置（单位：元）
+const WITHDRAW_LIMITS = {
+  singleMax: 200,    // 单笔最高限额
+  dailyMax: 20000,   // 单日最高限额
+  minAmount: 0.01    // 最低提现金额
+};
+
 // 微信登录配置
 const WX_CONFIG = {
   appId: 'wxd642d4eeae08b232',
@@ -24,6 +31,8 @@ function App() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawType, setWithdrawType] = useState('all');
+  const [withdrawTimes, setWithdrawTimes] = useState(1); // 需要提现的次数
+  const [currentWithdrawStep, setCurrentWithdrawStep] = useState(0); // 当前是第几次提现（0表示未开始）
   const [loading, setLoading] = useState(false);
   const [loginMode, setLoginMode] = useState('mobile');
   const [wxLoginReady, setWxLoginReady] = useState(false);
@@ -324,10 +333,40 @@ function App() {
   // ===== 提现 =====
   const handleWithdraw = async () => {
     const balanceYuan = dashboard.balance / 100;
-    const amount = withdrawType === 'all' ? balanceYuan : parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount <= 0) { alert('请输入有效金额'); return; }
-    if (amount > balanceYuan) { alert('金额超过余额'); return; }
-    if (!user?.openid) { alert('用户信息不完整，请重新登录'); return; }
+    const targetAmount = withdrawType === 'all' ? balanceYuan : parseFloat(withdrawAmount);
+    
+    if (isNaN(targetAmount) || targetAmount <= 0) { 
+      alert('请输入有效金额'); 
+      return; 
+    }
+    if (targetAmount < WITHDRAW_LIMITS.minAmount) {
+      alert(`最低提现金额为 ¥${WITHDRAW_LIMITS.minAmount}`);
+      return;
+    }
+    if (targetAmount > balanceYuan) { 
+      alert('金额超过余额'); 
+      return; 
+    }
+    if (!user?.openid) { 
+      alert('用户信息不完整，请重新登录'); 
+      return; 
+    }
+
+    // 计算需要分几次提现
+    const times = Math.ceil(targetAmount / WITHDRAW_LIMITS.singleMax);
+    
+    if (times > 1 && currentWithdrawStep === 0) {
+      // 首次点击，显示分批提现说明
+      setWithdrawTimes(times);
+      setCurrentWithdrawStep(0);
+      return;
+    }
+
+    // 执行提现
+    const isLastWithdraw = currentWithdrawStep === times - 1;
+    const currentAmount = isLastWithdraw 
+      ? targetAmount - (currentWithdrawStep * WITHDRAW_LIMITS.singleMax) // 最后一笔：剩余金额
+      : WITHDRAW_LIMITS.singleMax; // 非最后一笔：单笔限额
 
     try {
       setLoading(true);
@@ -339,7 +378,7 @@ function App() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          amount,
+          amount: currentAmount,
           openid: user.openid,
           login_type: loginType,
           nickname: user.nickname
@@ -355,11 +394,20 @@ function App() {
       }
 
       if (data.success && data.direct) {
-        alert('提现成功！已到账微信零钱');
-        // 刷新仪表盘
-        fetchDashboard(user.openid, loginType);
-        setShowWithdraw(false);
-        setWithdrawAmount('');
+        // 成功后的处理
+        if (isLastWithdraw || times === 1) {
+          alert('提现成功！已到账微信零钱');
+          fetchDashboard(user.openid, loginType);
+          setShowWithdraw(false);
+          setWithdrawAmount('');
+          setCurrentWithdrawStep(0);
+          setWithdrawTimes(1);
+        } else {
+          // 还有下一笔，继续
+          alert(`第 ${currentWithdrawStep + 1} 笔提现成功！请继续完成剩余 ${times - currentWithdrawStep - 1} 笔`);
+          setCurrentWithdrawStep(prev => prev + 1);
+          fetchDashboard(user.openid, loginType);
+        }
       } else if (data.success && data.package_info) {
         window.wx.checkJsApi({
           jsApiList: ['requestMerchantTransfer'],
@@ -371,14 +419,26 @@ function App() {
                 package: data.package_info,
               }, (res) => {
                 if (res.err_msg === 'requestMerchantTransfer:ok') {
-                  alert('收款成功！');
-                  fetchDashboard(user.openid, loginType);
-                  setShowWithdraw(false);
-                  setWithdrawAmount('');
+                  if (isLastWithdraw || times === 1) {
+                    alert('收款成功！');
+                    fetchDashboard(user.openid, loginType);
+                    setShowWithdraw(false);
+                    setWithdrawAmount('');
+                    setCurrentWithdrawStep(0);
+                    setWithdrawTimes(1);
+                  } else {
+                    alert(`第 ${currentWithdrawStep + 1} 笔收款成功！请继续完成剩余 ${times - currentWithdrawStep - 1} 笔`);
+                    setCurrentWithdrawStep(prev => prev + 1);
+                    fetchDashboard(user.openid, loginType);
+                  }
                 } else if (res.err_msg === 'requestMerchantTransfer:cancel') {
                   alert('您已取消收款，可稍后重试');
+                  setCurrentWithdrawStep(0);
+                  setWithdrawTimes(1);
                 } else {
                   alert('收款失败：' + res.err_msg);
+                  setCurrentWithdrawStep(0);
+                  setWithdrawTimes(1);
                 }
                 setLoading(false);
               });
@@ -392,10 +452,14 @@ function App() {
         return;
       } else {
         alert('提现失败：' + (data.msg || '未知错误'));
+        setCurrentWithdrawStep(0);
+        setWithdrawTimes(1);
       }
     } catch (error) {
       console.error('提现失败:', error);
       alert('请求失败：' + error.message);
+      setCurrentWithdrawStep(0);
+      setWithdrawTimes(1);
     } finally {
       setLoading(false);
     }
@@ -730,7 +794,15 @@ function App() {
           <div className="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold">申请提现</h3>
-              <button onClick={() => setShowWithdraw(false)} disabled={loading} className="p-2 hover:bg-gray-100 rounded-full transition disabled:opacity-50">
+              <button 
+                onClick={() => {
+                  setShowWithdraw(false);
+                  setCurrentWithdrawStep(0);
+                  setWithdrawTimes(1);
+                }} 
+                disabled={loading} 
+                className="p-2 hover:bg-gray-100 rounded-full transition disabled:opacity-50"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -740,35 +812,105 @@ function App() {
               <p className="text-3xl font-bold text-green-600">¥{balanceYuan}</p>
             </div>
 
+            {/* 限额提示 */}
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <Wallet size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-orange-700">
+                  <p className="font-medium mb-1">💡 提现限额说明</p>
+                  <p>• 单笔最高：¥{WITHDRAW_LIMITS.singleMax}</p>
+                  <p>• 单日最高：¥{WITHDRAW_LIMITS.dailyMax}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-3 mb-6">
               <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${withdrawType === 'all' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                <input type="radio" checked={withdrawType === 'all'} onChange={() => setWithdrawType('all')} disabled={loading} className="accent-green-500" />
-                <span className="font-medium">全部提现 (¥{balanceYuan})</span>
+                <input 
+                  type="radio" 
+                  checked={withdrawType === 'all'} 
+                  onChange={() => {
+                    setWithdrawType('all');
+                    setCurrentWithdrawStep(0);
+                    setWithdrawTimes(1);
+                  }} 
+                  disabled={loading} 
+                  className="accent-green-500" 
+                />
+                <div className="flex-1">
+                  <span className="font-medium">全部提现 (¥{balanceYuan})</span>
+                  {parseFloat(balanceYuan) > WITHDRAW_LIMITS.singleMax && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      需分 {Math.ceil(parseFloat(balanceYuan) / WITHDRAW_LIMITS.singleMax)} 次提现
+                    </p>
+                  )}
+                </div>
               </label>
 
               <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${withdrawType === 'custom' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                <input type="radio" checked={withdrawType === 'custom'} onChange={() => setWithdrawType('custom')} disabled={loading} className="accent-green-500" />
+                <input 
+                  type="radio" 
+                  checked={withdrawType === 'custom'} 
+                  onChange={() => {
+                    setWithdrawType('custom');
+                    setCurrentWithdrawStep(0);
+                    setWithdrawTimes(1);
+                  }} 
+                  disabled={loading} 
+                  className="accent-green-500" 
+                />
                 <span className="font-medium">自定义金额</span>
               </label>
 
               {withdrawType === 'custom' && (
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">¥</span>
-                  <input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={e => setWithdrawAmount(e.target.value)}
-                    placeholder="请输入提现金额"
-                    disabled={loading}
-                    className="w-full pl-10 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none text-lg"
-                  />
+                <div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">¥</span>
+                    <input
+                      type="number"
+                      value={withdrawAmount}
+                      onChange={(e) => {
+                        setWithdrawAmount(e.target.value);
+                        setCurrentWithdrawStep(0);
+                        setWithdrawTimes(1);
+                      }}
+                      placeholder={`最低 ¥${WITHDRAW_LIMITS.minAmount}`}
+                      disabled={loading}
+                      className="w-full pl-10 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none text-lg"
+                      step="0.01"
+                    />
+                  </div>
+                  {withdrawAmount && parseFloat(withdrawAmount) > WITHDRAW_LIMITS.singleMax && (
+                    <p className="text-xs text-orange-600 mt-2 ml-2">
+                      需分 {Math.ceil(parseFloat(withdrawAmount) / WITHDRAW_LIMITS.singleMax)} 次提现，每次 ¥{WITHDRAW_LIMITS.singleMax}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
 
+            {/* 分批提现进度提示 */}
+            {currentWithdrawStep > 0 && withdrawTimes > 1 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-900">提现进度</span>
+                  <span className="text-sm text-blue-600">{currentWithdrawStep} / {withdrawTimes}</span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(currentWithdrawStep / withdrawTimes) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-blue-700">
+                  已完成 {currentWithdrawStep} 笔，还需完成 {withdrawTimes - currentWithdrawStep} 笔
+                </p>
+              </div>
+            )}
+
             <button
               onClick={handleWithdraw}
-              disabled={loading}
+              disabled={loading || (withdrawType === 'custom' && !withdrawAmount)}
               className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 transition disabled:opacity-70"
             >
               {loading ? (
@@ -776,11 +918,19 @@ function App() {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   处理中...
                 </div>
-              ) : '确认提现'}
+              ) : currentWithdrawStep > 0 ? (
+                `继续提现 (第 ${currentWithdrawStep + 1}/${withdrawTimes} 笔)`
+              ) : withdrawTimes > 1 && currentWithdrawStep === 0 ? (
+                `开始分批提现 (共 ${withdrawTimes} 笔)`
+              ) : (
+                '确认提现'
+              )}
             </button>
 
             <p className="text-center text-gray-400 text-xs mt-4">
-              提现将在1-3个工作日内到账微信零钱
+              {withdrawTimes > 1 
+                ? '微信单笔限额，需分批确认，每次确认后会自动到账' 
+                : '提现将即时到账微信零钱'}
             </p>
           </div>
         </div>
