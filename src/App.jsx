@@ -12,238 +12,6 @@ const WX_CONFIG = {
   state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10)
 };
 
-// ====== 推广文案 ======
-const promotionTexts = [
-  {
-    id: 1, text: `【铁口直断·2026丙午年预警】
-
-别被\u201C丙午\u201D的红火迷惑，不是所有人都适合红红火火！
-
-老师看了几十个八字后发现，2026年丙午火旺，对一部分人是烈火烹油，对另一部分人却是火旺焚木\u2014\u2014贵人、婚姻、文书通通要小心！
-
-如果你八字身弱，官杀混杂，今年反而要低调行事，尤其注意农历三、九、十、十一月。
-
-\u2705 你的八字今年什么运势？
-\u2705 你的幸运色、幸运方向是什么？
-\u2705 哪个月能冲锋？哪个月必须躺平？
-
-\uD83D\uDC49 专属通道，一查便知：{link}` },
-  {
-    id: 2, text: `【深度解析·2026年运已更新】
-
-2026丙午年，岁运并临，磁场波动极大。
-
-有人今年乘风破浪，有人今年谨言慎行\u2014\u2014区别在哪里？在你的八字里！
-
-这份年运报告，不是泛泛的星座运势，而是基于你生辰八字的深度推算：
-\u2714\uFE0F 你的用神是什么？忌神是什么？
-\u2714\uFE0F 今年事业/财运/感情/健康四大板块详细打分
-\u2714\uFE0F 12个月逐月预警，精确到农历
-
-\uD83D\uDC49 知己知彼，点击查看你的2026运势说明书：{link}` },
-  {
-    id: 3, text: `【给总感觉\u201C压力山大\u201D的人】
-
-是不是总觉得被无形的压力、规则和小人束缚？
-是不是明明很努力，却总感觉使不上劲？
-
-从命理角度看，这叫\u201C官杀攻身\u201D。但2026年，是很多人翻身的一年！
-
-流年一到，身边会出现能帮你分担压力的朋友、同事，你的内心根基也会变强。今年的主题只有一个：借力打力，合众破局。
-
-\uD83D\uDC49 看看你是不是那个要翻身的人：{link}` },
-  {
-    id: 4, text: `【给想在2026年搞钱的人】
-
-为什么有的人赚钱轻松，有的人却赚得辛苦还留不住？
-八字里说，这叫\u201C身弱不担财\u201D。
-
-但2026年不一样！老师推算发现，今年很多人的财运格局会发生变化，正财看涨，偏财活跃，尤其农历正月、七月。
-
-\u26A0\uFE0F 风险提示：今年合作求财的多，但务必\u201C先小人后君子\u201D，谨防因朋友破财。
-
-\uD83D\uDC49 你的2026财运走势，点开即看：{link}` },
-  {
-    id: 5, text: `【给感情路上不太顺的人】
-
-为什么你的感情总是不太平淡？
-八字里叫\u201C官杀混杂\u201D。
-
-2026年，很多人的桃花运势会非常活跃，但过程充满考验与竞争。
-单身者有脱单机会（尤其农历四、五、七月），有伴侣者需警惕口舌之争。
-
-\uD83D\uDC94 感情雷区：农历六月、十月，容易出口伤人，务必注意沟通方式。
-
-\uD83D\uDC49 你的2026感情走势图已生成：{link}` },
-  {
-    id: 6, text: `【2026年，你的幸运色是什么？】
-
-八字命理告诉你答案：
-
-\u2705 幸运色：绿色、青色、红色、紫色
-\u2705 幸运数字：3、4、2、7
-\u2705 幸运方向：东方、南方
-\u2705 贵人属相：虎、狗、羊
-
-穿对颜色，去对方向，好运自然来敲门。
-
-\uD83D\uDC49 你的专属年运报告，一键领取：{link}` },
-  {
-    id: 7, text: `【今年能不能发财，点开就知道】
-
-一份价值感拉满的2026年运报告，包含：
-\uD83D\uDD25 八字原局深度解析（你是身强还是身弱）
-\uD83D\uDD25 2026年事业/财运/感情/健康详细打分
-\uD83D\uDD25 12个月逐月吉凶预警（精确到农历）
-\uD83D\uDD25 你的专属改运锦囊（贵人、小人、禁忌）
-
-\uD83D\uDC49 不信玄学的别进，信的人点这里：{link}` },
-  {
-    id: 8, text: `【不到一分钟，读懂你的2026】
-
-输入生辰，一键生成。
-
-你的2026关键词是什么？
-你的2026幸运物是什么？
-你的2026贵人是谁？小人是谁？
-
-想知道答案？年运报告里写得很清楚。
-
-\uD83D\uDC49 {link}` },
-  {
-    id: 9, text: `【测完回来告诉我准不准】
-
-朋友发给我的2026年运报告，说准得头皮发麻。
-
-我本来不信，结果测出来说我\u201C农历三月、九月、十月要特别注意肠胃和口舌\u201D\u2014\u2014这不就是我的老毛病吗？！
-
-给你们搞了个专属入口，测完记得回来告诉我：
-准不准？你的关键月份是几月？
-
-\uD83D\uDC49 入口在此，别声张：{link}` },
-  {
-    id: 10, text: `【关系铁不铁，就看你敢不敢让我看你的年运】
-
-别问，问就是我2026年要起飞了。
-
-报告说我今年\u201C由弱转强，合众破局\u201D，事业财运双丰收，唯独感情上有点小摩擦（建议我多穿绿色）。
-
-想不想看看你们的2026年剧本？
-我这儿有个专属通道，点开即看，童叟无欺。
-
-\uD83D\uDC49 {link}` },
-  {
-    id: 11, text: `【2026丙午年·你的翻身机会到了】
-
-过去几年是不是总觉得处处受制，有力使不出？
-
-2026年丙午，对你可能是关键转折点！流年火旺，补足你命局所需，由弱转强，终于能挺直腰杆做人了。
-
-但切记：火旺也伤贵人，今年对长辈、上级要多一分耐心。
-
-\uD83D\uDC49 点击查看你的2026全方位解析：{link}` },
-  {
-    id: 12, text: `【别瞎忙了，先看看你的2026运势地图】
-
-为什么有些人忙一年没结果？
-因为没在对的时间做对的事！
-
-这份报告告诉你：
-\uD83D\uDCC5 哪几个月适合冲锋陷阵
-\uD83D\uDCC5 哪几个月适合韬光养晦
-\uD83D\uDCC5 哪几个月必须谨言慎行
-
-\uD83D\uDC49 一键获取你的2026行动指南：{link}` },
-  {
-    id: 13, text: `【2026年，谁是你的贵人？谁是你的小人？】
-
-有的人出现在你生命里是来帮你的，有的人是来给你上课的。
-
-2026年，你的贵人藏在哪个方位？
-今年要远离哪种人？
-
-报告里写得很清楚，别等吃亏了才回头看。
-
-\uD83D\uDC49 点击查看：{link}` },
-  {
-    id: 14, text: `【2026年健康预警】
-
-很多人只关心财运事业，却忽略了身体才是本钱。
-
-2026丙午年，火旺之年，心血管、眼睛、失眠问题是高发区！尤其农历三月、五月、六月、十月，身体最容易出状况。
-
-提前知道，提前预防。
-
-\uD83D\uDC49 你的2026健康走势图：{link}` },
-  {
-    id: 15, text: `【单身人士注意：2026桃花运来了】
-
-2026年桃花方位：正南
-桃花旺盛月份：农历四月、五月、七月
-
-但注意：今年桃花带竞争，遇到的人可能不止一个人追。擦亮眼睛，别急着上头！
-
-\uD83D\uDC49 看看你的正缘什么时候出现：{link}` },
-  {
-    id: 16, text: `【2026年，这四个月份你必须小心】
-
-老师反复提醒：
-\u26A0\uFE0F 农历三月：压力骤增，谨防口舌
-\u26A0\uFE0F 农历九月：过度享受，懒散破财
-\u26A0\uFE0F 农历十月：伤官见官，是非不断
-\u26A0\uFE0F 农历十一月：内外交困，忍耐为上
-
-这几个月份，能躺平就别乱动！
-
-\uD83D\uDC49 你的完整年运报告里有详细解读：{link}` },
-  {
-    id: 17, text: `【2026年，你的幸运数字是多少？】
-
-有人问：数字真的能改运吗？
-命理上说，用对数字可以补足你命局所缺。
-
-2026年你的幸运数字是：3、4、2、7
-选手机号、车牌号、密码，多用这几个数。
-
-\uD83D\uDC49 还有更多改运妙招，点开即看：{link}` },
-  {
-    id: 18, text: `【2026年，去这个方向能发财】
-
-2026年你的求财吉利方位：东方、南方
-
-找工作、出差、旅行、甚至办公桌朝向，多往这两个方向靠，财运自然来。
-
-想知道为什么？命理老师给你讲明白。
-
-\uD83D\uDC49 点击查看完整解读：{link}` },
-  {
-    id: 19, text: `【2026年，这三类人是你的贵人】
-
-① 属虎的人
-② 属狗的人
-③ 属羊的人
-
-今年多和他们来往，多听他们的建议，关键时刻能拉你一把。
-
-\uD83D\uDC49 你的专属年运报告里还有更多干货：{link}` },
-  {
-    id: 20, text: `【2026年运报告·最后30个免费名额】
-
-本来是想自己留着看的，老师催我多分享给别人。
-
-基于真八字，不是套模板的那种泛泛之谈。
-输入生日，一键生成你的2026全方位解析。
-
-名额有限，先到先得。
-
-\uD83D\uDC49 点击领取：{link}` }
-];
-
-// ====== 报告预览截图配置 ======
-const PREVIEW_IMAGES = [
-  { id: 1, url: './preview1.jpg', title: '报告预览 1' },
-];
-
 const isRealMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const fenToYuan = (fen) => (fen / 100).toFixed(2);
 
@@ -286,9 +54,10 @@ function App() {
   const [withdrawalsTotal, setWithdrawalsTotal] = useState(0);
 
   // ====== 每个产品独立的推广素材状态 ======
-  const [expandedPromo, setExpandedPromo] = useState(null); // 当前展开素材的产品ID
-  const [promoIndexMap, setPromoIndexMap] = useState({}); // { productId: currentIndex }
+  const [expandedPromo, setExpandedPromo] = useState(null);
+  const [promoIndexMap, setPromoIndexMap] = useState({});
   const [previewImg, setPreviewImg] = useState(null);
+  const [previewImgProductId, setPreviewImgProductId] = useState(null);
   const [savingImg, setSavingImg] = useState(null);
 
   const PAGE_SIZE = 15;
@@ -304,26 +73,37 @@ function App() {
     return `${baseLink}${product.url_path}?ref=${user.refcode}`;
   };
 
-  // ====== 获取某个产品当前的推广文案 ======
+  // ====== 获取某个产品的推广文案列表（从后端数据） ======
+  const getProductPromoTexts = (product) => {
+    return product.promotion_texts || [];
+  };
+
+  // ====== 获取某个产品的预览图列表（从后端数据） ======
+  const getProductPreviewImages = (product) => {
+    return product.preview_images || [];
+  };
+
+  // ====== 获取某个产品当前的推广文案（默认第0条） ======
   const getPromoTextForProduct = (product) => {
-    const idx = promoIndexMap[product.id] ?? Math.floor(Math.random() * promotionTexts.length);
-    // 初始化（懒加载）
-    if (promoIndexMap[product.id] === undefined) {
-      setPromoIndexMap(prev => ({ ...prev, [product.id]: idx }));
-    }
-    const t = promotionTexts[idx];
-    return t.text.replace(/\{link\}/g, getProductPromoLink(product));
+    const texts = getProductPromoTexts(product);
+    if (texts.length === 0) return '暂无推广文案';
+    const idx = promoIndexMap[product.id] ?? 0;
+    const safeIdx = idx % texts.length;
+    const t = texts[safeIdx];
+    return t.replace(/\{link\}/g, getProductPromoLink(product));
   };
 
   const getPromoIndex = (productId) => {
     return promoIndexMap[productId] ?? 0;
   };
 
-  const shufflePromoForProduct = (productId) => {
-    const current = promoIndexMap[productId] ?? 0;
+  const shufflePromoForProduct = (product) => {
+    const texts = getProductPromoTexts(product);
+    if (texts.length <= 1) return;
+    const current = promoIndexMap[product.id] ?? 0;
     let next;
-    do { next = Math.floor(Math.random() * promotionTexts.length); } while (next === current && promotionTexts.length > 1);
-    setPromoIndexMap(prev => ({ ...prev, [productId]: next }));
+    do { next = Math.floor(Math.random() * texts.length); } while (next === current);
+    setPromoIndexMap(prev => ({ ...prev, [product.id]: next }));
   };
 
   const setPromoIndexForProduct = (productId, idx) => {
@@ -343,13 +123,13 @@ function App() {
   };
 
   const saveImage = async (img) => {
-    setSavingImg(img.id);
+    setSavingImg(img.url);
     try {
       const res = await fetch(img.url);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `report_preview_${img.id}.jpg`;
+      a.href = url; a.download = `report_preview_${img.title || 'image'}.jpg`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
@@ -737,12 +517,16 @@ function App() {
   // ===== 主页面 =====
   const balanceYuan = fenToYuan(dashboard.balance);
 
-  // 去掉了"推广素材"Tab，只保留3个
   const tabs = [
     { key: 'products', label: '推广链接', icon: <Copy size={14} /> },
     { key: 'orders', label: '成交订单', icon: <FileText size={14} /> },
     { key: 'withdrawals', label: '提现记录', icon: <ArrowDownCircle size={14} /> },
   ];
+
+  // 获取当前预览大图所属产品的预览图列表
+  const currentPreviewImages = previewImgProductId
+    ? getProductPreviewImages(products.find(p => p.id === previewImgProductId) || {})
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">
@@ -825,9 +609,12 @@ function App() {
               ) : (
                 <div className="p-4 space-y-3">
                   {products.map(item => {
-                    const promoIdx = getPromoIndex(item.id);
+                    const promoTexts = getProductPromoTexts(item);
+                    const previewImages = getProductPreviewImages(item);
+                    const promoIdx = getPromoIndex(item.id) % Math.max(promoTexts.length, 1);
                     const isPromoExpanded = expandedPromo === item.id;
                     const promoCopyId = `promo_${item.id}`;
+                    const hasPromoContent = promoTexts.length > 0 || previewImages.length > 0;
 
                     return (
                       <div key={item.id} className="bg-gray-50 rounded-xl p-4">
@@ -889,121 +676,133 @@ function App() {
                           </div>
                         )}
 
-                        {/* 推广素材按钮 */}
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <button
-                            onClick={() => setExpandedPromo(isPromoExpanded ? null : item.id)}
-                            className="w-full flex items-center justify-between py-2 px-1 text-sm text-gray-500 hover:text-green-600 transition"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Megaphone size={14} />
-                              <span>推广素材</span>
-                              <span className="text-xs text-gray-300">文案 + 预览图</span>
-                            </div>
-                            <ChevronDown size={16} className={`transition-transform ${isPromoExpanded ? 'rotate-180' : ''}`} />
-                          </button>
-
-                          {/* 推广素材展开区域 */}
-                          {isPromoExpanded && (
-                            <div className="mt-2 space-y-4">
-                              {/* 文案区域 */}
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs text-gray-400">文案 #{promoIdx + 1}/{promotionTexts.length}</span>
-                                </div>
-                                <div className="bg-white rounded-xl p-3 border border-gray-100">
-                                  <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed font-sans"
-                                    style={{ fontFamily: 'inherit' }}>
-                                    {getPromoTextForProduct(item)}
-                                  </pre>
-                                </div>
-
-                                {/* 文案操作 */}
-                                <div className="flex items-center gap-2 mt-2">
-                                  <button onClick={() => copyPromoTextForProduct(item)}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition ${copiedId === promoCopyId ? 'bg-green-500 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}>
-                                    {copiedId === promoCopyId ? <><Check size={14} />已复制</> : <><Copy size={14} />复制文案</>}
-                                  </button>
-                                  <button onClick={() => shufflePromoForProduct(item.id)}
-                                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
-                                    <Shuffle size={14} /> 换一条
-                                  </button>
-                                </div>
-
-                                {/* 翻页指示 */}
-                                <div className="flex items-center justify-center gap-1.5 mt-2">
-                                  <button onClick={() => setPromoIndexForProduct(item.id, (promoIdx - 1 + promotionTexts.length) % promotionTexts.length)}
-                                    className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition">
-                                    <ChevronLeft size={16} />
-                                  </button>
-                                  <div className="flex gap-1">
-                                    {Array.from({ length: Math.min(promotionTexts.length, 10) }, (_, i) => {
-                                      const total = promotionTexts.length;
-                                      let idx;
-                                      if (total <= 10) {
-                                        idx = i;
-                                      } else {
-                                        const start = Math.max(0, Math.min(promoIdx - 4, total - 10));
-                                        idx = start + i;
-                                      }
-                                      return (
-                                        <button key={idx} onClick={() => setPromoIndexForProduct(item.id, idx)}
-                                          className={`w-1.5 h-1.5 rounded-full transition ${idx === promoIdx ? 'bg-green-500 scale-125' : 'bg-gray-300 hover:bg-gray-400'}`} />
-                                      );
-                                    })}
-                                  </div>
-                                  <button onClick={() => setPromoIndexForProduct(item.id, (promoIdx + 1) % promotionTexts.length)}
-                                    className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition">
-                                    <ChevronRight size={16} />
-                                  </button>
-                                </div>
+                        {/* 推广素材按钮（仅当有内容时显示） */}
+                        {hasPromoContent && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <button
+                              onClick={() => setExpandedPromo(isPromoExpanded ? null : item.id)}
+                              className="w-full flex items-center justify-between py-2 px-1 text-sm text-gray-500 hover:text-green-600 transition"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Megaphone size={14} />
+                                <span>推广素材</span>
+                                <span className="text-xs text-gray-300">
+                                  {promoTexts.length > 0 && `${promoTexts.length}条文案`}
+                                  {promoTexts.length > 0 && previewImages.length > 0 && ' + '}
+                                  {previewImages.length > 0 && `${previewImages.length}张图`}
+                                </span>
                               </div>
+                              <ChevronDown size={16} className={`transition-transform ${isPromoExpanded ? 'rotate-180' : ''}`} />
+                            </button>
 
-                              {/* 预览图区域 */}
-                              {PREVIEW_IMAGES.length > 0 && (
-                                <div>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Image size={14} className="text-gray-400" />
-                                    <span className="text-xs text-gray-400">报告预览截图</span>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    {PREVIEW_IMAGES.map(img => (
-                                      <div key={img.id} className="relative group">
-                                        <div className="bg-gray-100 rounded-lg overflow-hidden aspect-[3/4] cursor-pointer"
-                                          onClick={() => setPreviewImg(img)}>
-                                          <img src={img.url} alt={img.title}
-                                            className="w-full h-full object-cover transition group-hover:scale-105"
-                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                          />
-                                          <div className="hidden items-center justify-center w-full h-full bg-gray-100 text-gray-400 text-xs">
-                                            加载失败
-                                          </div>
+                            {/* 推广素材展开区域 */}
+                            {isPromoExpanded && (
+                              <div className="mt-2 space-y-4">
+                                {/* 文案区域 */}
+                                {promoTexts.length > 0 && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs text-gray-400">文案 #{promoIdx + 1}/{promoTexts.length}</span>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-3 border border-gray-100">
+                                      <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed font-sans"
+                                        style={{ fontFamily: 'inherit' }}>
+                                        {getPromoTextForProduct(item)}
+                                      </pre>
+                                    </div>
+
+                                    {/* 文案操作 */}
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <button onClick={() => copyPromoTextForProduct(item)}
+                                        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition ${copiedId === promoCopyId ? 'bg-green-500 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}>
+                                        {copiedId === promoCopyId ? <><Check size={14} />已复制</> : <><Copy size={14} />复制文案</>}
+                                      </button>
+                                      {promoTexts.length > 1 && (
+                                        <button onClick={() => shufflePromoForProduct(item)}
+                                          className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                                          <Shuffle size={14} /> 换一条
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {/* 翻页指示（文案>1条时显示） */}
+                                    {promoTexts.length > 1 && (
+                                      <div className="flex items-center justify-center gap-1.5 mt-2">
+                                        <button onClick={() => setPromoIndexForProduct(item.id, (promoIdx - 1 + promoTexts.length) % promoTexts.length)}
+                                          className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition">
+                                          <ChevronLeft size={16} />
+                                        </button>
+                                        <div className="flex gap-1">
+                                          {Array.from({ length: Math.min(promoTexts.length, 10) }, (_, i) => {
+                                            const total = promoTexts.length;
+                                            let idx;
+                                            if (total <= 10) {
+                                              idx = i;
+                                            } else {
+                                              const start = Math.max(0, Math.min(promoIdx - 4, total - 10));
+                                              idx = start + i;
+                                            }
+                                            return (
+                                              <button key={idx} onClick={() => setPromoIndexForProduct(item.id, idx)}
+                                                className={`w-1.5 h-1.5 rounded-full transition ${idx === promoIdx ? 'bg-green-500 scale-125' : 'bg-gray-300 hover:bg-gray-400'}`} />
+                                            );
+                                          })}
                                         </div>
-                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg p-1.5">
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-white text-[10px]">{img.title}</span>
-                                            <div className="flex gap-1">
-                                              <button onClick={(e) => { e.stopPropagation(); setPreviewImg(img); }}
-                                                className="p-0.5 bg-white/30 rounded-full hover:bg-white/50 transition">
-                                                <ZoomIn size={12} className="text-white" />
-                                              </button>
-                                              <button onClick={(e) => { e.stopPropagation(); saveImage(img); }}
-                                                className="p-0.5 bg-white/30 rounded-full hover:bg-white/50 transition">
-                                                {savingImg === img.id
-                                                  ? <Check size={12} className="text-white" />
-                                                  : <Download size={12} className="text-white" />}
-                                              </button>
+                                        <button onClick={() => setPromoIndexForProduct(item.id, (promoIdx + 1) % promoTexts.length)}
+                                          className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition">
+                                          <ChevronRight size={16} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* 预览图区域 */}
+                                {previewImages.length > 0 && (
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Image size={14} className="text-gray-400" />
+                                      <span className="text-xs text-gray-400">报告预览截图</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {previewImages.map((img, imgIdx) => (
+                                        <div key={imgIdx} className="relative group">
+                                          <div className="bg-gray-100 rounded-lg overflow-hidden aspect-[3/4] cursor-pointer"
+                                            onClick={() => { setPreviewImg(img); setPreviewImgProductId(item.id); }}>
+                                            <img src={img.url} alt={img.title}
+                                              className="w-full h-full object-cover transition group-hover:scale-105"
+                                              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                            />
+                                            <div className="hidden items-center justify-center w-full h-full bg-gray-100 text-gray-400 text-xs">
+                                              加载失败
+                                            </div>
+                                          </div>
+                                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg p-1.5">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-white text-[10px]">{img.title}</span>
+                                              <div className="flex gap-1">
+                                                <button onClick={(e) => { e.stopPropagation(); setPreviewImg(img); setPreviewImgProductId(item.id); }}
+                                                  className="p-0.5 bg-white/30 rounded-full hover:bg-white/50 transition">
+                                                  <ZoomIn size={12} className="text-white" />
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); saveImage(img); }}
+                                                  className="p-0.5 bg-white/30 rounded-full hover:bg-white/50 transition">
+                                                  {savingImg === img.url
+                                                    ? <Check size={12} className="text-white" />
+                                                    : <Download size={12} className="text-white" />}
+                                                </button>
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1157,27 +956,27 @@ function App() {
       {/* ====== 图片预览大图弹窗 ====== */}
       {previewImg && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-          onClick={() => setPreviewImg(null)}>
+          onClick={() => { setPreviewImg(null); setPreviewImgProductId(null); }}>
           <button className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
-            onClick={() => setPreviewImg(null)}>
+            onClick={() => { setPreviewImg(null); setPreviewImgProductId(null); }}>
             <X size={24} className="text-white" />
           </button>
 
-          {PREVIEW_IMAGES.length > 1 && (
+          {currentPreviewImages.length > 1 && (
             <>
               <button className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const idx = PREVIEW_IMAGES.findIndex(i => i.id === previewImg.id);
-                  setPreviewImg(PREVIEW_IMAGES[(idx - 1 + PREVIEW_IMAGES.length) % PREVIEW_IMAGES.length]);
+                  const idx = currentPreviewImages.findIndex(i => i.url === previewImg.url);
+                  setPreviewImg(currentPreviewImages[(idx - 1 + currentPreviewImages.length) % currentPreviewImages.length]);
                 }}>
                 <ChevronLeft size={24} className="text-white" />
               </button>
               <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const idx = PREVIEW_IMAGES.findIndex(i => i.id === previewImg.id);
-                  setPreviewImg(PREVIEW_IMAGES[(idx + 1) % PREVIEW_IMAGES.length]);
+                  const idx = currentPreviewImages.findIndex(i => i.url === previewImg.url);
+                  setPreviewImg(currentPreviewImages[(idx + 1) % currentPreviewImages.length]);
                 }}>
                 <ChevronRight size={24} className="text-white" />
               </button>
@@ -1191,14 +990,14 @@ function App() {
               <span className="text-white text-sm">{previewImg.title}</span>
               <button onClick={() => saveImage(previewImg)}
                 className="flex items-center gap-1.5 px-4 py-2 bg-white/20 text-white rounded-full text-sm hover:bg-white/30 transition">
-                {savingImg === previewImg.id ? <><Check size={16} />已保存</> : <><Download size={16} />保存图片</>}
+                {savingImg === previewImg.url ? <><Check size={16} />已保存</> : <><Download size={16} />保存图片</>}
               </button>
             </div>
-            {PREVIEW_IMAGES.length > 1 && (
+            {currentPreviewImages.length > 1 && (
               <div className="flex gap-2 mt-3">
-                {PREVIEW_IMAGES.map(img => (
-                  <button key={img.id} onClick={() => setPreviewImg(img)}
-                    className={`w-2.5 h-2.5 rounded-full transition ${img.id === previewImg.id ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'}`} />
+                {currentPreviewImages.map((img, imgIdx) => (
+                  <button key={imgIdx} onClick={() => setPreviewImg(img)}
+                    className={`w-2.5 h-2.5 rounded-full transition ${img.url === previewImg.url ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'}`} />
                 ))}
               </div>
             )}
