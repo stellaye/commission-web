@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift, Edit3, ChevronDown, ChevronUp, FileText, ArrowDownCircle, RefreshCw } from 'lucide-react';
+import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift, Edit3, ChevronDown, ChevronUp, FileText, ArrowDownCircle, RefreshCw, MessageCircle } from 'lucide-react';
 
 const baseLink = "https://stellarsmart.cn/wanxiang_institute/";
 
@@ -293,6 +293,17 @@ function App() {
     });
   };
 
+  const copyWxServiceId = () => {
+    const wxId = 'woodwithyrj';
+    navigator.clipboard.writeText(wxId).then(() => {
+      setCopiedId('wx_service_card'); setTimeout(() => setCopiedId(null), 2000);
+    }).catch(() => {
+      const inp = document.createElement('input'); inp.value = wxId;
+      document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
+      setCopiedId('wx_service_card'); setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
   const handleWithdraw = async () => {
     if (!isWeChatBrowser()) {
       setFailMsg('请在微信浏览器中打开本网站进行提现');
@@ -565,6 +576,26 @@ function App() {
               <p className="text-gray-400 text-xs mt-1 flex items-center justify-center gap-1"><Users size={12} />推广人数</p>
             </div>
           </div>
+        </div>
+
+        {/* 客服微信卡片 */}
+        <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <MessageCircle size={20} className="text-green-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800 text-sm">客服微信</p>
+                <p className="text-green-600 font-bold text-sm mt-0.5 font-mono tracking-wide">woodwithyrj</p>
+              </div>
+            </div>
+            <button onClick={copyWxServiceId}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === 'wx_service_card' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
+              {copiedId === 'wx_service_card' ? <><Check size={14} />已复制</> : <><Copy size={14} />复制微信号</>}
+            </button>
+          </div>
+          <p className="text-gray-400 text-xs mt-3 ml-13 pl-13" style={{ marginLeft: '52px' }}>推广问题、提现问题均可联系客服咨询</p>
         </div>
 
         {/* Tab 区域 */}
