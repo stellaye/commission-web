@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift, Edit3, ChevronDown, ChevronUp, FileText, ArrowDownCircle, RefreshCw, MessageCircle } from 'lucide-react';
+import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift, Edit3, ChevronDown, ChevronUp, FileText, ArrowDownCircle, RefreshCw } from 'lucide-react';
 
 const baseLink = "https://stellarsmart.cn/wanxiang_institute/";
 
@@ -578,26 +578,6 @@ function App() {
           </div>
         </div>
 
-        {/* 客服微信卡片 */}
-        <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <MessageCircle size={20} className="text-green-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">客服微信</p>
-                <p className="text-green-600 font-bold text-sm mt-0.5 font-mono tracking-wide">woodwithyrj</p>
-              </div>
-            </div>
-            <button onClick={copyWxServiceId}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === 'wx_service_card' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
-              {copiedId === 'wx_service_card' ? <><Check size={14} />已复制</> : <><Copy size={14} />复制微信号</>}
-            </button>
-          </div>
-          <p className="text-gray-400 text-xs mt-3 ml-13 pl-13" style={{ marginLeft: '52px' }}>推广问题、提现问题均可联系客服咨询</p>
-        </div>
-
         {/* Tab 区域 */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="flex border-b">
@@ -835,9 +815,17 @@ function App() {
             </>
           )}
         </div>
-      </div>
 
-      {/* 提现弹窗 */}
+        {/* 底部客服信息 */}
+        <div className="flex items-center justify-center gap-2 mt-6 mb-2">
+          <span className="text-gray-300 text-xs">客服微信：</span>
+          <span className="text-gray-400 text-xs font-mono">woodwithyrj</span>
+          <button onClick={copyWxServiceId}
+            className={`text-xs px-2 py-0.5 rounded transition ${copiedId === 'wx_service_card' ? 'text-green-600' : 'text-gray-300 hover:text-gray-500'}`}>
+            {copiedId === 'wx_service_card' ? '已复制' : '复制'}
+          </button>
+        </div>
+      </div>
       {showWithdraw && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-6">
