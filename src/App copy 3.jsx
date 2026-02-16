@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift, Edit3, ChevronDown, ChevronUp, FileText, ArrowDownCircle, RefreshCw, Shuffle, Download, ZoomIn, ChevronLeft, ChevronRight, Megaphone, Image } from 'lucide-react';
+import { Copy, Check, LogOut, Wallet, QrCode, Smartphone, X, TrendingUp, Users, Gift, Edit3, ChevronDown, ChevronUp, FileText, ArrowDownCircle, RefreshCw } from 'lucide-react';
 
 const baseLink = "https://stellarsmart.cn/wanxiang_institute/";
 
-const WITHDRAW_LIMITS = { singleMax: 200, dailyMax: 20000, minAmount: 0.01 };
+const WITHDRAW_LIMITS = {
+  singleMax: 200,
+  dailyMax: 20000,
+  minAmount: 0.01
+};
 
 const WX_CONFIG = {
   appId: 'wxd642d4eeae08b232',
@@ -11,223 +15,6 @@ const WX_CONFIG = {
   scope: 'snsapi_login',
   state: 'wx_login_state_' + Math.random().toString(36).substr(2, 10)
 };
-
-// ====== 推广文案 ======
-const promotionTexts = [
-  { id: 1, text: `【铁口直断·2026丙午年预警】
-
-别被\u201C丙午\u201D的红火迷惑，不是所有人都适合红红火火！
-
-老师看了几十个八字后发现，2026年丙午火旺，对一部分人是烈火烹油，对另一部分人却是火旺焚木\u2014\u2014贵人、婚姻、文书通通要小心！
-
-如果你八字身弱，官杀混杂，今年反而要低调行事，尤其注意农历三、九、十、十一月。
-
-\u2705 你的八字今年什么运势？
-\u2705 你的幸运色、幸运方向是什么？
-\u2705 哪个月能冲锋？哪个月必须躺平？
-
-\uD83D\uDC49 专属通道，一查便知：{link}` },
-  { id: 2, text: `【深度解析·2026年运已更新】
-
-2026丙午年，岁运并临，磁场波动极大。
-
-有人今年乘风破浪，有人今年谨言慎行\u2014\u2014区别在哪里？在你的八字里！
-
-这份年运报告，不是泛泛的星座运势，而是基于你生辰八字的深度推算：
-\u2714\uFE0F 你的用神是什么？忌神是什么？
-\u2714\uFE0F 今年事业/财运/感情/健康四大板块详细打分
-\u2714\uFE0F 12个月逐月预警，精确到农历
-
-\uD83D\uDC49 知己知彼，点击查看你的2026运势说明书：{link}` },
-  { id: 3, text: `【给总感觉\u201C压力山大\u201D的人】
-
-是不是总觉得被无形的压力、规则和小人束缚？
-是不是明明很努力，却总感觉使不上劲？
-
-从命理角度看，这叫\u201C官杀攻身\u201D。但2026年，是很多人翻身的一年！
-
-流年一到，身边会出现能帮你分担压力的朋友、同事，你的内心根基也会变强。今年的主题只有一个：借力打力，合众破局。
-
-\uD83D\uDC49 看看你是不是那个要翻身的人：{link}` },
-  { id: 4, text: `【给想在2026年搞钱的人】
-
-为什么有的人赚钱轻松，有的人却赚得辛苦还留不住？
-八字里说，这叫\u201C身弱不担财\u201D。
-
-但2026年不一样！老师推算发现，今年很多人的财运格局会发生变化，正财看涨，偏财活跃，尤其农历正月、七月。
-
-\u26A0\uFE0F 风险提示：今年合作求财的多，但务必\u201C先小人后君子\u201D，谨防因朋友破财。
-
-\uD83D\uDC49 你的2026财运走势，点开即看：{link}` },
-  { id: 5, text: `【给感情路上不太顺的人】
-
-为什么你的感情总是不太平淡？
-八字里叫\u201C官杀混杂\u201D。
-
-2026年，很多人的桃花运势会非常活跃，但过程充满考验与竞争。
-单身者有脱单机会（尤其农历四、五、七月），有伴侣者需警惕口舌之争。
-
-\uD83D\uDC94 感情雷区：农历六月、十月，容易出口伤人，务必注意沟通方式。
-
-\uD83D\uDC49 你的2026感情走势图已生成：{link}` },
-  { id: 6, text: `【2026年，你的幸运色是什么？】
-
-八字命理告诉你答案：
-
-\u2705 幸运色：绿色、青色、红色、紫色
-\u2705 幸运数字：3、4、2、7
-\u2705 幸运方向：东方、南方
-\u2705 贵人属相：虎、狗、羊
-
-穿对颜色，去对方向，好运自然来敲门。
-
-\uD83D\uDC49 你的专属年运报告，一键领取：{link}` },
-  { id: 7, text: `【今年能不能发财，点开就知道】
-
-一份价值感拉满的2026年运报告，包含：
-\uD83D\uDD25 八字原局深度解析（你是身强还是身弱）
-\uD83D\uDD25 2026年事业/财运/感情/健康详细打分
-\uD83D\uDD25 12个月逐月吉凶预警（精确到农历）
-\uD83D\uDD25 你的专属改运锦囊（贵人、小人、禁忌）
-
-\uD83D\uDC49 不信玄学的别进，信的人点这里：{link}` },
-  { id: 8, text: `【不到一分钟，读懂你的2026】
-
-输入生辰，一键生成。
-
-你的2026关键词是什么？
-你的2026幸运物是什么？
-你的2026贵人是谁？小人是谁？
-
-想知道答案？年运报告里写得很清楚。
-
-\uD83D\uDC49 {link}` },
-  { id: 9, text: `【测完回来告诉我准不准】
-
-朋友发给我的2026年运报告，说准得头皮发麻。
-
-我本来不信，结果测出来说我\u201C农历三月、九月、十月要特别注意肠胃和口舌\u201D\u2014\u2014这不就是我的老毛病吗？！
-
-给你们搞了个专属入口，测完记得回来告诉我：
-准不准？你的关键月份是几月？
-
-\uD83D\uDC49 入口在此，别声张：{link}` },
-  { id: 10, text: `【关系铁不铁，就看你敢不敢让我看你的年运】
-
-别问，问就是我2026年要起飞了。
-
-报告说我今年\u201C由弱转强，合众破局\u201D，事业财运双丰收，唯独感情上有点小摩擦（建议我多穿绿色）。
-
-想不想看看你们的2026年剧本？
-我这儿有个专属通道，点开即看，童叟无欺。
-
-\uD83D\uDC49 {link}` },
-  { id: 11, text: `【2026丙午年·你的翻身机会到了】
-
-过去几年是不是总觉得处处受制，有力使不出？
-
-2026年丙午，对你可能是关键转折点！流年火旺，补足你命局所需，由弱转强，终于能挺直腰杆做人了。
-
-但切记：火旺也伤贵人，今年对长辈、上级要多一分耐心。
-
-\uD83D\uDC49 点击查看你的2026全方位解析：{link}` },
-  { id: 12, text: `【别瞎忙了，先看看你的2026运势地图】
-
-为什么有些人忙一年没结果？
-因为没在对的时间做对的事！
-
-这份报告告诉你：
-\uD83D\uDCC5 哪几个月适合冲锋陷阵
-\uD83D\uDCC5 哪几个月适合韬光养晦
-\uD83D\uDCC5 哪几个月必须谨言慎行
-
-\uD83D\uDC49 一键获取你的2026行动指南：{link}` },
-  { id: 13, text: `【2026年，谁是你的贵人？谁是你的小人？】
-
-有的人出现在你生命里是来帮你的，有的人是来给你上课的。
-
-2026年，你的贵人藏在哪个方位？
-今年要远离哪种人？
-
-报告里写得很清楚，别等吃亏了才回头看。
-
-\uD83D\uDC49 点击查看：{link}` },
-  { id: 14, text: `【2026年健康预警】
-
-很多人只关心财运事业，却忽略了身体才是本钱。
-
-2026丙午年，火旺之年，心血管、眼睛、失眠问题是高发区！尤其农历三月、五月、六月、十月，身体最容易出状况。
-
-提前知道，提前预防。
-
-\uD83D\uDC49 你的2026健康走势图：{link}` },
-  { id: 15, text: `【单身人士注意：2026桃花运来了】
-
-2026年桃花方位：正南
-桃花旺盛月份：农历四月、五月、七月
-
-但注意：今年桃花带竞争，遇到的人可能不止一个人追。擦亮眼睛，别急着上头！
-
-\uD83D\uDC49 看看你的正缘什么时候出现：{link}` },
-  { id: 16, text: `【2026年，这四个月份你必须小心】
-
-老师反复提醒：
-\u26A0\uFE0F 农历三月：压力骤增，谨防口舌
-\u26A0\uFE0F 农历九月：过度享受，懒散破财
-\u26A0\uFE0F 农历十月：伤官见官，是非不断
-\u26A0\uFE0F 农历十一月：内外交困，忍耐为上
-
-这几个月份，能躺平就别乱动！
-
-\uD83D\uDC49 你的完整年运报告里有详细解读：{link}` },
-  { id: 17, text: `【2026年，你的幸运数字是多少？】
-
-有人问：数字真的能改运吗？
-命理上说，用对数字可以补足你命局所缺。
-
-2026年你的幸运数字是：3、4、2、7
-选手机号、车牌号、密码，多用这几个数。
-
-\uD83D\uDC49 还有更多改运妙招，点开即看：{link}` },
-  { id: 18, text: `【2026年，去这个方向能发财】
-
-2026年你的求财吉利方位：东方、南方
-
-找工作、出差、旅行、甚至办公桌朝向，多往这两个方向靠，财运自然来。
-
-想知道为什么？命理老师给你讲明白。
-
-\uD83D\uDC49 点击查看完整解读：{link}` },
-  { id: 19, text: `【2026年，这三类人是你的贵人】
-
-① 属虎的人
-② 属狗的人
-③ 属羊的人
-
-今年多和他们来往，多听他们的建议，关键时刻能拉你一把。
-
-\uD83D\uDC49 你的专属年运报告里还有更多干货：{link}` },
-  { id: 20, text: `【2026年运报告·最后30个免费名额】
-
-本来是想自己留着看的，老师催我多分享给别人。
-
-基于真八字，不是套模板的那种泛泛之谈。
-输入生日，一键生成你的2026全方位解析。
-
-名额有限，先到先得。
-
-\uD83D\uDC49 点击领取：{link}` }
-];
-
-// ====== 报告预览截图配置 ======
-// 👇 在这里配置你的预览图片，支持任意数量
-const PREVIEW_IMAGES = [
-  { id: 1, url: '/wanxiang/static/preview1.jpg', title: '报告预览 1' },
-  { id: 2, url: '/wanxiang/static/preview2.jpg', title: '报告预览 2' },
-  { id: 3, url: '/wanxiang/static/preview3.jpg', title: '报告预览 3' },
-  // 继续添加更多图片...
-  // { id: 4, url: '/wanxiang/static/preview4.jpg', title: '报告预览 4' },
-];
 
 const isRealMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 const fenToYuan = (fen) => (fen / 100).toFixed(2);
@@ -249,7 +36,9 @@ function App() {
   const [loginType, setLoginType] = useState(null);
   const [showWxGuide, setShowWxGuide] = useState(false);
 
-  const [dashboard, setDashboard] = useState({ balance: 0, total_earnings: 0, order_count: 0, referral_count: 0 });
+  const [dashboard, setDashboard] = useState({
+    balance: 0, total_earnings: 0, order_count: 0, referral_count: 0,
+  });
   const [products, setProducts] = useState([]);
   const [editingPrice, setEditingPrice] = useState(null);
   const [priceInput, setPriceInput] = useState('');
@@ -270,69 +59,21 @@ function App() {
   const [withdrawalsHasMore, setWithdrawalsHasMore] = useState(false);
   const [withdrawalsTotal, setWithdrawalsTotal] = useState(0);
 
-  // ====== 推广素材相关状态 ======
-  const [promoIndex, setPromoIndex] = useState(() => Math.floor(Math.random() * promotionTexts.length));
-  const [promoProductId, setPromoProductId] = useState(null); // 选中的产品ID，用于生成链接
-  const [previewImg, setPreviewImg] = useState(null); // 当前预览大图
-  const [savingImg, setSavingImg] = useState(null);
-
   const PAGE_SIZE = 15;
+
   const wxLoginContainerRef = useRef(null);
   const wxScriptRef = useRef(null);
   const isWxLoginInitialized = useRef(false);
 
   const isWeChatBrowser = () => /MicroMessenger/i.test(navigator.userAgent);
 
-  // ====== 获取当前推广链接 ======
-  const getPromoLink = () => {
-    if (!user?.refcode) return baseLink;
-    const product = promoProductId ? products.find(p => p.id === promoProductId) : products[0];
-    const urlPath = product?.url_path || '';
-    return `${baseLink}${urlPath}?ref=${user.refcode}`;
-  };
 
-  const getCurrentPromoText = () => {
-    const t = promotionTexts[promoIndex];
-    return t.text.replace(/\{link\}/g, getPromoLink());
-  };
 
-  const shufflePromo = () => {
-    let next;
-    do { next = Math.floor(Math.random() * promotionTexts.length); } while (next === promoIndex && promotionTexts.length > 1);
-    setPromoIndex(next);
-  };
-
-  const copyPromoText = () => {
-    const text = getCurrentPromoText();
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedId('promo_text'); setTimeout(() => setCopiedId(null), 2000);
-    }).catch(() => {
-      const inp = document.createElement('textarea'); inp.value = text;
-      document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
-      setCopiedId('promo_text'); setTimeout(() => setCopiedId(null), 2000);
-    });
-  };
-
-  const saveImage = async (img) => {
-    setSavingImg(img.id);
-    try {
-      const res = await fetch(img.url);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `report_preview_${img.id}.jpg`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      // fallback: 新窗口打开
-      window.open(img.url, '_blank');
-    }
-    setTimeout(() => setSavingImg(null), 1500);
-  };
-
-  // ====== 原有功能 ======
   const pollDashboard = (openid, lt, retries = 3, delay = 2000) => {
-    for (let i = 1; i <= retries; i++) setTimeout(() => fetchDashboard(openid, lt), delay * i);
+    // 多次延迟刷新，等待服务端收到微信回调后余额更新
+    for (let i = 1; i <= retries; i++) {
+      setTimeout(() => fetchDashboard(openid, lt), delay * i);
+    }
   };
 
   const fetchDashboard = async (openid, lt) => {
@@ -347,10 +88,7 @@ function App() {
     try {
       const res = await fetch(`/wanxiang/api/products?openid=${encodeURIComponent(openid)}&login_type=${lt}`);
       const d = await res.json();
-      if (d.success && d.products) {
-        setProducts(d.products);
-        if (!promoProductId && d.products.length > 0) setPromoProductId(d.products[0].id);
-      }
+      if (d.success && d.products) setProducts(d.products);
     } catch (e) { console.error('获取产品列表失败:', e); }
   };
 
@@ -361,7 +99,9 @@ function App() {
       const d = await res.json();
       if (d.success) {
         setOrders(prev => append ? [...prev, ...d.orders] : d.orders);
-        setOrdersTotal(d.total || 0); setOrdersHasMore(d.has_more || false); setOrdersPage(page);
+        setOrdersTotal(d.total || 0);
+        setOrdersHasMore(d.has_more || false);
+        setOrdersPage(page);
       }
     } catch (e) { console.error('获取订单失败:', e); }
     finally { setOrdersLoading(false); }
@@ -374,7 +114,9 @@ function App() {
       const d = await res.json();
       if (d.success) {
         setWithdrawals(prev => append ? [...prev, ...d.withdrawals] : d.withdrawals);
-        setWithdrawalsTotal(d.total || 0); setWithdrawalsHasMore(d.has_more || false); setWithdrawalsPage(page);
+        setWithdrawalsTotal(d.total || 0);
+        setWithdrawalsHasMore(d.has_more || false);
+        setWithdrawalsPage(page);
       }
     } catch (e) { console.error('获取提现记录失败:', e); }
     finally { setWithdrawalsLoading(false); }
@@ -382,8 +124,12 @@ function App() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    if (tab === 'orders' && orders.length === 0 && user) fetchOrders(user.openid, loginType, 1);
-    if (tab === 'withdrawals' && withdrawals.length === 0 && user) fetchWithdrawals(user.openid, loginType, 1);
+    if (tab === 'orders' && orders.length === 0 && user) {
+      fetchOrders(user.openid, loginType, 1);
+    }
+    if (tab === 'withdrawals' && withdrawals.length === 0 && user) {
+      fetchWithdrawals(user.openid, loginType, 1);
+    }
   };
 
   const handleSetPrice = async (productId) => {
@@ -426,7 +172,8 @@ function App() {
 
   useEffect(() => {
     const mobile = isRealMobileDevice();
-    setIsOnMobileDevice(mobile); setLoginMode(mobile ? 'mobile' : 'qrcode');
+    setIsOnMobileDevice(mobile);
+    setLoginMode(mobile ? 'mobile' : 'qrcode');
   }, []);
 
   const getUrlParam = (name) => {
@@ -438,7 +185,9 @@ function App() {
   useEffect(() => {
     const code = getUrlParam('code');
     const state = getUrlParam('state');
-    if (code && state && state.includes('wx_login_state_')) handleWxCodeToUserInfo(code, state.includes('mobile'));
+    if (code && state && state.includes('wx_login_state_')) {
+      handleWxCodeToUserInfo(code, state.includes('mobile'));
+    }
   }, []);
 
   const initWxJSSDK = async () => {
@@ -453,16 +202,26 @@ function App() {
     } catch (e) { console.error('JSSDK签名请求失败:', e); }
   };
 
+
   useEffect(() => {
     const stored = localStorage.getItem('user_info');
     const lt = localStorage.getItem('login_type');
     if (stored && lt) {
       try {
         const u = JSON.parse(stored);
-        if (u.openid) { setUser(u); setLoginType(lt); if (lt === 'mobile') initWxJSSDK(); loadUserData(u.openid, lt); }
-      } catch { localStorage.removeItem('user_info'); localStorage.removeItem('login_type'); }
+        if (u.openid) {
+          setUser(u);
+          setLoginType(lt);
+          if (lt === 'mobile') initWxJSSDK();
+          loadUserData(u.openid, lt);
+        }
+      } catch (e) {
+        localStorage.removeItem('user_info');
+        localStorage.removeItem('login_type');
+      }
     }
   }, []);
+
 
   useEffect(() => {
     if (loginMode !== 'qrcode' || user) return;
@@ -546,7 +305,11 @@ function App() {
   };
 
   const handleWithdraw = async () => {
-    if (!isWeChatBrowser()) { setFailMsg('请在微信浏览器中打开本网站进行提现'); setShowFailDialog(true); return; }
+    if (!isWeChatBrowser()) {
+      setFailMsg('请在微信浏览器中打开本网站进行提现');
+      setShowFailDialog(true);
+      return;
+    }
     const balanceYuan = dashboard.balance / 100;
     const targetAmount = withdrawType === 'all' ? balanceYuan : parseFloat(withdrawAmount);
     if (isNaN(targetAmount) || targetAmount <= 0) { alert('请输入有效金额'); return; }
@@ -564,13 +327,24 @@ function App() {
     const resetW = () => { setCurrentWithdrawStep(0); setWithdrawTimes(1); };
     const closeW = () => { setShowWithdraw(false); setWithdrawAmount(''); resetW(); };
     const refreshAfterWithdraw = (withdrawnAmountYuan) => {
+      // a) 立即乐观更新前端余额（不等服务端回调）
       if (withdrawnAmountYuan) {
         const deductFen = Math.round(withdrawnAmountYuan * 100);
-        setDashboard(prev => ({ ...prev, balance: Math.max((prev.balance || 0) - deductFen, 0) }));
+        setDashboard(prev => ({
+          ...prev,
+          balance: Math.max((prev.balance || 0) - deductFen, 0),
+        }));
       }
+
+      // b) 立即拉一次（可能还没更新）
       fetchDashboard(user.openid, loginType);
+
+      // c) 延迟轮询 3 次（2s、4s、6s），确保拿到服务端最新数据
       pollDashboard(user.openid, loginType, 3, 2000);
-      if (withdrawals.length > 0 || activeTab === 'withdrawals') fetchWithdrawals(user.openid, loginType, 1);
+
+      // d) 刷新提现记录
+      if (withdrawals.length > 0 || activeTab === 'withdrawals')
+        fetchWithdrawals(user.openid, loginType, 1);
     };
 
     try {
@@ -578,6 +352,7 @@ function App() {
       const headers = { 'Content-Type': 'application/json' };
       const token = localStorage.getItem('token');
       if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch('/wanxiang/api/withdraw', {
         method: 'POST', headers,
         body: JSON.stringify({ amount: currentAmount, openid: user.openid, login_type: loginType, nickname: user.nickname }),
@@ -587,28 +362,58 @@ function App() {
       try { data = JSON.parse(rawText); } catch { alert('服务器返回格式错误'); setLoading(false); return; }
 
       if (data.success && data.direct) {
-        if (isLastWithdraw || times === 1) { alert('提现成功！已到账微信零钱'); refreshAfterWithdraw(targetAmount); closeW(); }
-        else { alert(`第 ${currentWithdrawStep + 1} 笔提现成功！...`); setCurrentWithdrawStep(prev => prev + 1); refreshAfterWithdraw(currentAmount); }
-      } else if (data.success && data.package_info) {
+        if (isLastWithdraw || times === 1) {
+          alert('提现成功！已到账微信零钱');
+          refreshAfterWithdraw(targetAmount); closeW();   // ← 传入总金额
+        } else {
+          alert(`第 ${currentWithdrawStep + 1} 笔提现成功！...`);
+          setCurrentWithdrawStep(prev => prev + 1);
+          refreshAfterWithdraw(currentAmount);             // ← 传入本笔金额
+        }
+      }
+      else if (data.success && data.package_info) {
         window.wx.checkJsApi({
           jsApiList: ['requestMerchantTransfer'],
           success: (checkRes) => {
             if (checkRes.checkResult?.requestMerchantTransfer) {
-              WeixinJSBridge.invoke('requestMerchantTransfer', { mchId: data.mch_id, appId: data.app_id, package: data.package_info }, (res) => {
+              WeixinJSBridge.invoke('requestMerchantTransfer', {
+                mchId: data.mch_id, appId: data.app_id, package: data.package_info,
+              }, (res) => {
                 if (res.err_msg === 'requestMerchantTransfer:ok') {
-                  if (isLastWithdraw || times === 1) { alert('收款成功！'); refreshAfterWithdraw(targetAmount); closeW(); }
-                  else { alert(`第 ${currentWithdrawStep + 1} 笔收款成功！...`); setCurrentWithdrawStep(prev => prev + 1); refreshAfterWithdraw(currentAmount); }
+                  if (isLastWithdraw || times === 1) {
+                    alert('收款成功！');
+                    refreshAfterWithdraw(targetAmount); closeW();   // ← 传入总金额
+                  } else {
+                    alert(`第 ${currentWithdrawStep + 1} 笔收款成功！...`);
+                    setCurrentWithdrawStep(prev => prev + 1);
+                    refreshAfterWithdraw(currentAmount);             // ← 传入本笔金额
+                  }
                 } else if (res.err_msg === 'requestMerchantTransfer:cancel') { alert('您已取消收款，可稍后重试'); resetW(); }
-                else { setFailMsg(res.err_msg || '收款异常'); setShowFailDialog(true); resetW(); }
+                else {
+                  setFailMsg(res.err_msg || '收款异常');
+                  setShowFailDialog(true); resetW();
+                }
                 setLoading(false);
               });
-            } else { setFailMsg('您的微信版本过低，请更新至最新版本'); setShowFailDialog(true); setLoading(false); }
+            } else {
+              setFailMsg('您的微信版本过低，请更新至最新版本');
+              setShowFailDialog(true); setLoading(false);
+            }
           },
-          fail: () => { setFailMsg('微信接口检查失败'); setShowFailDialog(true); setLoading(false); }
+          fail: () => {
+            setFailMsg('微信接口检查失败');
+            setShowFailDialog(true); setLoading(false);
+          }
         });
         return;
-      } else { setFailMsg(data.msg || '未知错误'); setShowFailDialog(true); resetW(); }
-    } catch (e) { console.error('提现失败:', e); setFailMsg('请求失败：' + e.message); setShowFailDialog(true); resetW(); }
+      } else {
+        setFailMsg(data.msg || '未知错误');
+        setShowFailDialog(true); resetW();
+      }
+    } catch (e) {
+      console.error('提现失败:', e); setFailMsg('请求失败：' + e.message);
+      setShowFailDialog(true); resetW();
+    }
     finally { setLoading(false); }
   };
 
@@ -634,6 +439,7 @@ function App() {
             <h1 className="text-2xl font-bold text-gray-800">推广赚佣金</h1>
             <p className="text-gray-500 mt-2 text-sm">分享链接，轻松赚取高额佣金</p>
           </div>
+
           {!isOnMobileDevice && (
             <div className="flex justify-center gap-4 mb-6">
               <button onClick={() => handleSwitchLoginMode('mobile')}
@@ -646,6 +452,7 @@ function App() {
               </button>
             </div>
           )}
+
           {loginMode === 'mobile' ? (
             <button onClick={handleLogin} disabled={loading}
               className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3 transition disabled:opacity-70">
@@ -672,6 +479,7 @@ function App() {
           )}
           <p className="text-center text-gray-400 text-xs mt-6">登录即表示同意《用户协议》和《隐私政策》</p>
         </div>
+
         {showWxGuide && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6">
             <div className="bg-white rounded-2xl w-full max-w-sm p-6 relative">
@@ -712,7 +520,6 @@ function App() {
 
   const tabs = [
     { key: 'products', label: '推广链接', icon: <Copy size={14} /> },
-    { key: 'promo', label: '推广素材', icon: <Megaphone size={14} /> },
     { key: 'orders', label: '成交订单', icon: <FileText size={14} /> },
     { key: 'withdrawals', label: '提现记录', icon: <ArrowDownCircle size={14} /> },
   ];
@@ -731,7 +538,9 @@ function App() {
             </div>
             <button onClick={() => {
               setUser(null); setWxLoginReady(false); isWxLoginInitialized.current = false;
-              localStorage.removeItem('token'); localStorage.removeItem('user_info'); localStorage.removeItem('login_type');
+              localStorage.removeItem('token');
+              localStorage.removeItem('user_info');
+              localStorage.removeItem('login_type');
               setDashboard({ balance: 0, total_earnings: 0, order_count: 0, referral_count: 0 });
               setProducts([]); setOrders([]); setWithdrawals([]); setActiveTab('products');
             }} className="p-2 hover:bg-white/20 rounded-full transition"><LogOut size={20} /></button>
@@ -740,7 +549,6 @@ function App() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 -mt-20">
-        {/* 余额卡片 */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500 text-sm">可提现佣金 (元)</span>
@@ -772,17 +580,17 @@ function App() {
 
         {/* Tab 区域 */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="flex border-b overflow-x-auto">
+          <div className="flex border-b">
             {tabs.map(tab => (
               <button key={tab.key} onClick={() => handleTabChange(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1 py-3.5 text-xs sm:text-sm font-medium transition-all relative whitespace-nowrap min-w-0 px-1 ${activeTab === tab.key ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-medium transition-all relative ${activeTab === tab.key ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}>
                 {tab.icon} {tab.label}
                 {activeTab === tab.key && <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-green-500 rounded-full" />}
               </button>
             ))}
           </div>
 
-          {/* ====== 推广链接 Tab ====== */}
+          {/* 推广链接 Tab */}
           {activeTab === 'products' && (
             <>
               <div className="p-4 bg-gray-50">
@@ -808,6 +616,7 @@ function App() {
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-xs text-gray-400">当前售价 ¥{fenToYuan(item.active_price)}</span>
                               <span className="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded">佣金 ¥{fenToYuan(item.commission)}</span>
+                              {/* {item.custom_price && <span className="text-xs bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">已定价</span>} */}
                             </div>
                           </div>
                         </div>
@@ -860,146 +669,7 @@ function App() {
             </>
           )}
 
-          {/* ====== 推广素材 Tab（新增） ====== */}
-          {activeTab === 'promo' && (
-            <div className="p-4 space-y-6">
-              {/* 推广文案区 */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Megaphone size={16} className="text-green-600" />
-                    <span className="font-semibold text-gray-800 text-sm">推广文案</span>
-                    <span className="text-xs text-gray-400">#{promoIndex + 1}/{promotionTexts.length}</span>
-                  </div>
-                </div>
-
-                {/* 选择产品（如果有多个产品） */}
-                {products.length > 1 && (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-400 mb-1.5">选择推广产品（文案中的链接将使用该产品）</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {products.map(p => (
-                        <button key={p.id} onClick={() => setPromoProductId(p.id)}
-                          className={`text-xs px-3 py-1.5 rounded-full transition ${promoProductId === p.id ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                          {p.icon} {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 文案展示 */}
-                <div className="bg-gray-50 rounded-xl p-4 relative">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed font-sans"
-                    style={{ fontFamily: 'inherit' }}>
-                    {getCurrentPromoText()}
-                  </pre>
-                </div>
-
-                {/* 操作按钮 */}
-                <div className="flex items-center gap-3 mt-3">
-                  <button onClick={copyPromoText}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition ${copiedId === 'promo_text' ? 'bg-green-500 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}>
-                    {copiedId === 'promo_text' ? <><Check size={16} />已复制文案</> : <><Copy size={16} />一键复制文案</>}
-                  </button>
-                  <button onClick={shufflePromo}
-                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
-                    <Shuffle size={16} /> 换一条
-                  </button>
-                </div>
-
-                {/* 快速翻页 */}
-                <div className="flex items-center justify-center gap-2 mt-3">
-                  <button onClick={() => setPromoIndex(i => (i - 1 + promotionTexts.length) % promotionTexts.length)}
-                    className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 transition">
-                    <ChevronLeft size={18} />
-                  </button>
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.min(promotionTexts.length, 10) }, (_, i) => {
-                      // 显示当前页附近的点
-                      const total = promotionTexts.length;
-                      let idx;
-                      if (total <= 10) {
-                        idx = i;
-                      } else {
-                        const start = Math.max(0, Math.min(promoIndex - 4, total - 10));
-                        idx = start + i;
-                      }
-                      return (
-                        <button key={idx} onClick={() => setPromoIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition ${idx === promoIndex ? 'bg-green-500 scale-125' : 'bg-gray-300 hover:bg-gray-400'}`} />
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => setPromoIndex(i => (i + 1) % promotionTexts.length)}
-                    className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 transition">
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {/* 分割线 */}
-              <div className="border-t border-gray-100" />
-
-              {/* 报告预览截图区 */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Image size={16} className="text-green-600" />
-                  <span className="font-semibold text-gray-800 text-sm">报告预览截图</span>
-                  <span className="text-xs text-gray-400">长按/点击保存后发给好友</span>
-                </div>
-
-                {PREVIEW_IMAGES.length === 0 ? (
-                  <div className="bg-gray-50 rounded-xl p-8 text-center">
-                    <Image size={32} className="mx-auto text-gray-200 mb-2" />
-                    <p className="text-gray-400 text-sm">暂无预览图片</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {PREVIEW_IMAGES.map(img => (
-                      <div key={img.id} className="relative group">
-                        <div className="bg-gray-100 rounded-xl overflow-hidden aspect-[3/4] cursor-pointer"
-                          onClick={() => setPreviewImg(img)}>
-                          <img src={img.url} alt={img.title}
-                            className="w-full h-full object-cover transition group-hover:scale-105"
-                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                          />
-                          <div className="hidden items-center justify-center w-full h-full bg-gray-100 text-gray-400 text-xs">
-                            加载失败
-                          </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent rounded-b-xl p-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-white text-xs">{img.title}</span>
-                            <div className="flex gap-1">
-                              <button onClick={(e) => { e.stopPropagation(); setPreviewImg(img); }}
-                                className="p-1 bg-white/30 rounded-full hover:bg-white/50 transition">
-                                <ZoomIn size={14} className="text-white" />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); saveImage(img); }}
-                                className="p-1 bg-white/30 rounded-full hover:bg-white/50 transition">
-                                {savingImg === img.id
-                                  ? <Check size={14} className="text-white" />
-                                  : <Download size={14} className="text-white" />}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {PREVIEW_IMAGES.length > 0 && (
-                  <p className="text-gray-300 text-xs text-center mt-3">
-                    💡 点击图片可查看大图，点击下载按钮可保存到本地
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ====== 成交订单 Tab ====== */}
+          {/* 成交订单 Tab — 去掉 divide-y，改用卡片间距 */}
           {activeTab === 'orders' && (
             <>
               <div className="p-4 bg-gray-50 flex items-center justify-between">
@@ -1044,20 +714,36 @@ function App() {
                       {expandedOrder === order.id && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
                           <div className="bg-white rounded-xl p-3 space-y-2">
-                            {[
-                              ['订单编号', <span key="no" className="text-gray-600 font-mono text-[11px]">{order.order_no}</span>],
-                              ['产品名称', order.product_name],
-                              ['付款金额', <span key="a" className="text-gray-800 font-medium">¥{fenToYuan(order.paid_amount)}</span>],
-                              ['佣金比例', `${order.commission_rate}%`],
-                              ['佣金收入', <span key="c" className="text-green-600 font-bold">¥{fenToYuan(order.commission)}</span>],
-                              ['付款时间', formatTime(order.paid_at) || '—'],
-                              ...(order.buyer_nickname ? [['购买用户', order.buyer_nickname]] : []),
-                            ].map(([label, val], i) => (
-                              <div key={i} className="flex justify-between text-xs">
-                                <span className="text-gray-400">{label}</span>
-                                <span className="text-gray-600">{val}</span>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">订单编号</span>
+                              <span className="text-gray-600 font-mono text-[11px]">{order.order_no}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">产品名称</span>
+                              <span className="text-gray-600">{order.product_name}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">付款金额</span>
+                              <span className="text-gray-800 font-medium">¥{fenToYuan(order.paid_amount)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">佣金比例</span>
+                              <span className="text-gray-600">{order.commission_rate}%</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">佣金收入</span>
+                              <span className="text-green-600 font-bold">¥{fenToYuan(order.commission)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">付款时间</span>
+                              <span className="text-gray-600">{formatTime(order.paid_at) || '—'}</span>
+                            </div>
+                            {order.buyer_nickname && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">购买用户</span>
+                                <span className="text-gray-600">{order.buyer_nickname}</span>
                               </div>
-                            ))}
+                            )}
                           </div>
                         </div>
                       )}
@@ -1076,7 +762,7 @@ function App() {
             </>
           )}
 
-          {/* ====== 提现记录 Tab ====== */}
+          {/* 提现记录 Tab — 去掉 divide-y，改用卡片间距 */}
           {activeTab === 'withdrawals' && (
             <>
               <div className="p-4 bg-gray-50 flex items-center justify-between">
@@ -1140,61 +826,6 @@ function App() {
           </button>
         </div>
       </div>
-
-      {/* ====== 图片预览大图弹窗 ====== */}
-      {previewImg && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-          onClick={() => setPreviewImg(null)}>
-          <button className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
-            onClick={() => setPreviewImg(null)}>
-            <X size={24} className="text-white" />
-          </button>
-
-          {/* 左右切换 */}
-          {PREVIEW_IMAGES.length > 1 && (
-            <>
-              <button className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const idx = PREVIEW_IMAGES.findIndex(i => i.id === previewImg.id);
-                  setPreviewImg(PREVIEW_IMAGES[(idx - 1 + PREVIEW_IMAGES.length) % PREVIEW_IMAGES.length]);
-                }}>
-                <ChevronLeft size={24} className="text-white" />
-              </button>
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const idx = PREVIEW_IMAGES.findIndex(i => i.id === previewImg.id);
-                  setPreviewImg(PREVIEW_IMAGES[(idx + 1) % PREVIEW_IMAGES.length]);
-                }}>
-                <ChevronRight size={24} className="text-white" />
-              </button>
-            </>
-          )}
-
-          <div className="max-w-lg w-full max-h-[85vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
-            <img src={previewImg.url} alt={previewImg.title}
-              className="max-w-full max-h-[75vh] object-contain rounded-lg" />
-            <div className="flex items-center gap-3 mt-4">
-              <span className="text-white text-sm">{previewImg.title}</span>
-              <button onClick={() => saveImage(previewImg)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white/20 text-white rounded-full text-sm hover:bg-white/30 transition">
-                {savingImg === previewImg.id ? <><Check size={16} />已保存</> : <><Download size={16} />保存图片</>}
-              </button>
-            </div>
-            {PREVIEW_IMAGES.length > 1 && (
-              <div className="flex gap-2 mt-3">
-                {PREVIEW_IMAGES.map(img => (
-                  <button key={img.id} onClick={() => setPreviewImg(img)}
-                    className={`w-2.5 h-2.5 rounded-full transition ${img.id === previewImg.id ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'}`} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 提现弹窗 */}
       {showWithdraw && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl p-6">
@@ -1270,7 +901,6 @@ function App() {
         </div>
       )}
 
-      {/* 提现失败弹窗 */}
       {showFailDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-sm rounded-2xl p-6 text-center">
@@ -1285,11 +915,17 @@ function App() {
                 <span className="text-lg font-bold text-gray-800">woodwithyrj</span>
                 <button onClick={() => {
                   navigator.clipboard.writeText('woodwithyrj').then(() => {
-                    setCopiedId('wx_service'); setTimeout(() => setCopiedId(null), 2000);
+                    setCopiedId('wx_service');
+                    setTimeout(() => setCopiedId(null), 2000);
                   }).catch(() => {
-                    const inp = document.createElement('input'); inp.value = 'woodwithyrj';
-                    document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
-                    setCopiedId('wx_service'); setTimeout(() => setCopiedId(null), 2000);
+                    const inp = document.createElement('input');
+                    inp.value = 'woodwithyrj';
+                    document.body.appendChild(inp);
+                    inp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(inp);
+                    setCopiedId('wx_service');
+                    setTimeout(() => setCopiedId(null), 2000);
                   });
                 }} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition ${copiedId === 'wx_service' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
                   {copiedId === 'wx_service' ? <><Check size={14} />已复制</> : <><Copy size={14} />复制</>}
