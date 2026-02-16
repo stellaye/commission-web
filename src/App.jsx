@@ -240,11 +240,8 @@ const promotionTexts = [
 ];
 
 // ====== 报告预览截图配置 ======
-// 👇 在这里配置你的预览图片，支持任意数量
 const PREVIEW_IMAGES = [
   { id: 1, url: './preview1.jpg', title: '报告预览 1' },
-  // 继续添加更多图片...
-  // { id: 4, url: '/wanxiang/static/preview4.jpg', title: '报告预览 4' },
 ];
 
 const isRealMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -288,10 +285,10 @@ function App() {
   const [withdrawalsHasMore, setWithdrawalsHasMore] = useState(false);
   const [withdrawalsTotal, setWithdrawalsTotal] = useState(0);
 
-  // ====== 推广素材相关状态 ======
-  const [promoIndex, setPromoIndex] = useState(() => Math.floor(Math.random() * promotionTexts.length));
-  const [promoProductId, setPromoProductId] = useState(null); // 选中的产品ID，用于生成链接
-  const [previewImg, setPreviewImg] = useState(null); // 当前预览大图
+  // ====== 每个产品独立的推广素材状态 ======
+  const [expandedPromo, setExpandedPromo] = useState(null); // 当前展开素材的产品ID
+  const [promoIndexMap, setPromoIndexMap] = useState({}); // { productId: currentIndex }
+  const [previewImg, setPreviewImg] = useState(null);
   const [savingImg, setSavingImg] = useState(null);
 
   const PAGE_SIZE = 15;
@@ -301,33 +298,47 @@ function App() {
 
   const isWeChatBrowser = () => /MicroMessenger/i.test(navigator.userAgent);
 
-  // ====== 获取当前推广链接 ======
-  const getPromoLink = () => {
-    if (!user?.refcode) return baseLink;
-    const product = promoProductId ? products.find(p => p.id === promoProductId) : products[0];
-    const urlPath = product?.url_path || '';
-    return `${baseLink}${urlPath}?ref=${user.refcode}`;
+  // ====== 获取某个产品的推广链接 ======
+  const getProductPromoLink = (product) => {
+    if (!user?.refcode || !product) return baseLink;
+    return `${baseLink}${product.url_path}?ref=${user.refcode}`;
   };
 
-  const getCurrentPromoText = () => {
-    const t = promotionTexts[promoIndex];
-    return t.text.replace(/\{link\}/g, getPromoLink());
+  // ====== 获取某个产品当前的推广文案 ======
+  const getPromoTextForProduct = (product) => {
+    const idx = promoIndexMap[product.id] ?? Math.floor(Math.random() * promotionTexts.length);
+    // 初始化（懒加载）
+    if (promoIndexMap[product.id] === undefined) {
+      setPromoIndexMap(prev => ({ ...prev, [product.id]: idx }));
+    }
+    const t = promotionTexts[idx];
+    return t.text.replace(/\{link\}/g, getProductPromoLink(product));
   };
 
-  const shufflePromo = () => {
+  const getPromoIndex = (productId) => {
+    return promoIndexMap[productId] ?? 0;
+  };
+
+  const shufflePromoForProduct = (productId) => {
+    const current = promoIndexMap[productId] ?? 0;
     let next;
-    do { next = Math.floor(Math.random() * promotionTexts.length); } while (next === promoIndex && promotionTexts.length > 1);
-    setPromoIndex(next);
+    do { next = Math.floor(Math.random() * promotionTexts.length); } while (next === current && promotionTexts.length > 1);
+    setPromoIndexMap(prev => ({ ...prev, [productId]: next }));
   };
 
-  const copyPromoText = () => {
-    const text = getCurrentPromoText();
+  const setPromoIndexForProduct = (productId, idx) => {
+    setPromoIndexMap(prev => ({ ...prev, [productId]: idx }));
+  };
+
+  const copyPromoTextForProduct = (product) => {
+    const text = getPromoTextForProduct(product);
+    const copyId = `promo_${product.id}`;
     navigator.clipboard.writeText(text).then(() => {
-      setCopiedId('promo_text'); setTimeout(() => setCopiedId(null), 2000);
+      setCopiedId(copyId); setTimeout(() => setCopiedId(null), 2000);
     }).catch(() => {
       const inp = document.createElement('textarea'); inp.value = text;
       document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
-      setCopiedId('promo_text'); setTimeout(() => setCopiedId(null), 2000);
+      setCopiedId(copyId); setTimeout(() => setCopiedId(null), 2000);
     });
   };
 
@@ -342,7 +353,6 @@ function App() {
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      // fallback: 新窗口打开
       window.open(img.url, '_blank');
     }
     setTimeout(() => setSavingImg(null), 1500);
@@ -367,7 +377,6 @@ function App() {
       const d = await res.json();
       if (d.success && d.products) {
         setProducts(d.products);
-        if (!promoProductId && d.products.length > 0) setPromoProductId(d.products[0].id);
       }
     } catch (e) { console.error('获取产品列表失败:', e); }
   };
@@ -728,9 +737,9 @@ function App() {
   // ===== 主页面 =====
   const balanceYuan = fenToYuan(dashboard.balance);
 
+  // 去掉了"推广素材"Tab，只保留3个
   const tabs = [
     { key: 'products', label: '推广链接', icon: <Copy size={14} /> },
-    { key: 'promo', label: '推广素材', icon: <Megaphone size={14} /> },
     { key: 'orders', label: '成交订单', icon: <FileText size={14} /> },
     { key: 'withdrawals', label: '提现记录', icon: <ArrowDownCircle size={14} /> },
   ];
@@ -800,11 +809,11 @@ function App() {
             ))}
           </div>
 
-          {/* ====== 推广链接 Tab ====== */}
+          {/* ====== 推广链接 Tab（含推广素材） ====== */}
           {activeTab === 'products' && (
             <>
               <div className="p-4 bg-gray-50">
-                <p className="text-gray-400 text-xs">点击复制链接分享给好友 · 可自定义售价提高收益</p>
+                <p className="text-gray-400 text-xs">复制链接或展开推广素材 · 可自定义售价提高收益</p>
               </div>
               {dataLoading ? (
                 <div className="p-8 text-center">
@@ -815,206 +824,192 @@ function App() {
                 <div className="p-8 text-center text-gray-400 text-sm">暂无产品</div>
               ) : (
                 <div className="p-4 space-y-3">
-                  {products.map(item => (
-                    <div key={item.id} className="bg-gray-50 rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <span className="text-2xl flex-shrink-0">{item.icon}</span>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-800">{item.name}</p>
-                            <p className="text-gray-400 text-xs">{item.desc}</p>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-xs text-gray-400">当前售价 ¥{fenToYuan(item.active_price)}</span>
-                              <span className="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded">佣金 ¥{fenToYuan(item.commission)}</span>
+                  {products.map(item => {
+                    const promoIdx = getPromoIndex(item.id);
+                    const isPromoExpanded = expandedPromo === item.id;
+                    const promoCopyId = `promo_${item.id}`;
+
+                    return (
+                      <div key={item.id} className="bg-gray-50 rounded-xl p-4">
+                        {/* 产品信息行 */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-800">{item.name}</p>
+                              <p className="text-gray-400 text-xs">{item.desc}</p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-xs text-gray-400">当前售价 ¥{fenToYuan(item.active_price)}</span>
+                                <span className="text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded">佣金 ¥{fenToYuan(item.commission)}</span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                            <button onClick={() => {
+                              if (editingPrice === item.id) { setEditingPrice(null); } else {
+                                setEditingPrice(item.id);
+                                setPriceInput(item.custom_price ? (item.custom_price / 100).toString() : (item.recommended_price / 100).toString());
+                              }
+                            }} className="p-2 rounded-full text-gray-400 hover:bg-white transition" title="自定义价格">
+                              {editingPrice === item.id ? <ChevronUp size={16} /> : <Edit3 size={16} />}
+                            </button>
+                            <button onClick={() => copyLink(item)}
+                              className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id ? 'bg-green-500 text-white' : 'bg-white text-green-600 hover:bg-green-50'}`}>
+                              {copiedId === item.id ? <><Check size={16} />已复制</> : <><Copy size={16} />复制</>}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          <button onClick={() => {
-                            if (editingPrice === item.id) { setEditingPrice(null); } else {
-                              setEditingPrice(item.id);
-                              setPriceInput(item.custom_price ? (item.custom_price / 100).toString() : (item.recommended_price / 100).toString());
-                            }
-                          }} className="p-2 rounded-full text-gray-400 hover:bg-white transition" title="自定义价格">
-                            {editingPrice === item.id ? <ChevronUp size={16} /> : <Edit3 size={16} />}
+
+                        {/* 自定义价格（展开） */}
+                        {editingPrice === item.id && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="bg-white rounded-xl p-4">
+                              <p className="text-xs text-gray-500 mb-3">
+                                价格范围：¥{fenToYuan(item.base_price)}（保底价）~ ¥{fenToYuan(item.max_price)}（最高价），推荐价 ¥{fenToYuan(item.recommended_price)}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">¥</span>
+                                  <input type="number" value={priceInput} onChange={e => setPriceInput(e.target.value)}
+                                    placeholder={`${fenToYuan(item.base_price)} ~ ${fenToYuan(item.max_price)}`}
+                                    className="w-full pl-8 pr-3 py-2.5 border border-gray-200 rounded-lg focus:border-green-500 focus:outline-none text-sm"
+                                    step="0.01" min={item.base_price / 100} max={item.max_price / 100} />
+                                </div>
+                                <button onClick={() => handleSetPrice(item.id)} disabled={priceLoading}
+                                  className="bg-green-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-600 transition disabled:opacity-50 whitespace-nowrap">
+                                  {priceLoading ? '保存中...' : '确认定价'}
+                                </button>
+                              </div>
+                              {priceInput && (
+                                <p className="text-xs text-green-600 mt-2">
+                                  预计佣金：¥{(Math.round(parseFloat(priceInput) * 100 * item.commission_rate / 100 / 100) * 100 / 100).toFixed(2)}（{item.commission_rate}%）
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 推广素材按钮 */}
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <button
+                            onClick={() => setExpandedPromo(isPromoExpanded ? null : item.id)}
+                            className="w-full flex items-center justify-between py-2 px-1 text-sm text-gray-500 hover:text-green-600 transition"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Megaphone size={14} />
+                              <span>推广素材</span>
+                              <span className="text-xs text-gray-300">文案 + 预览图</span>
+                            </div>
+                            <ChevronDown size={16} className={`transition-transform ${isPromoExpanded ? 'rotate-180' : ''}`} />
                           </button>
-                          <button onClick={() => copyLink(item)}
-                            className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id ? 'bg-green-500 text-white' : 'bg-white text-green-600 hover:bg-green-50'}`}>
-                            {copiedId === item.id ? <><Check size={16} />已复制</> : <><Copy size={16} />复制</>}
-                          </button>
+
+                          {/* 推广素材展开区域 */}
+                          {isPromoExpanded && (
+                            <div className="mt-2 space-y-4">
+                              {/* 文案区域 */}
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs text-gray-400">文案 #{promoIdx + 1}/{promotionTexts.length}</span>
+                                </div>
+                                <div className="bg-white rounded-xl p-3 border border-gray-100">
+                                  <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed font-sans"
+                                    style={{ fontFamily: 'inherit' }}>
+                                    {getPromoTextForProduct(item)}
+                                  </pre>
+                                </div>
+
+                                {/* 文案操作 */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <button onClick={() => copyPromoTextForProduct(item)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition ${copiedId === promoCopyId ? 'bg-green-500 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}>
+                                    {copiedId === promoCopyId ? <><Check size={14} />已复制</> : <><Copy size={14} />复制文案</>}
+                                  </button>
+                                  <button onClick={() => shufflePromoForProduct(item.id)}
+                                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                                    <Shuffle size={14} /> 换一条
+                                  </button>
+                                </div>
+
+                                {/* 翻页指示 */}
+                                <div className="flex items-center justify-center gap-1.5 mt-2">
+                                  <button onClick={() => setPromoIndexForProduct(item.id, (promoIdx - 1 + promotionTexts.length) % promotionTexts.length)}
+                                    className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition">
+                                    <ChevronLeft size={16} />
+                                  </button>
+                                  <div className="flex gap-1">
+                                    {Array.from({ length: Math.min(promotionTexts.length, 10) }, (_, i) => {
+                                      const total = promotionTexts.length;
+                                      let idx;
+                                      if (total <= 10) {
+                                        idx = i;
+                                      } else {
+                                        const start = Math.max(0, Math.min(promoIdx - 4, total - 10));
+                                        idx = start + i;
+                                      }
+                                      return (
+                                        <button key={idx} onClick={() => setPromoIndexForProduct(item.id, idx)}
+                                          className={`w-1.5 h-1.5 rounded-full transition ${idx === promoIdx ? 'bg-green-500 scale-125' : 'bg-gray-300 hover:bg-gray-400'}`} />
+                                      );
+                                    })}
+                                  </div>
+                                  <button onClick={() => setPromoIndexForProduct(item.id, (promoIdx + 1) % promotionTexts.length)}
+                                    className="p-1 rounded-full text-gray-400 hover:bg-gray-100 transition">
+                                    <ChevronRight size={16} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* 预览图区域 */}
+                              {PREVIEW_IMAGES.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Image size={14} className="text-gray-400" />
+                                    <span className="text-xs text-gray-400">报告预览截图</span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {PREVIEW_IMAGES.map(img => (
+                                      <div key={img.id} className="relative group">
+                                        <div className="bg-gray-100 rounded-lg overflow-hidden aspect-[3/4] cursor-pointer"
+                                          onClick={() => setPreviewImg(img)}>
+                                          <img src={img.url} alt={img.title}
+                                            className="w-full h-full object-cover transition group-hover:scale-105"
+                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                          />
+                                          <div className="hidden items-center justify-center w-full h-full bg-gray-100 text-gray-400 text-xs">
+                                            加载失败
+                                          </div>
+                                        </div>
+                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg p-1.5">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-white text-[10px]">{img.title}</span>
+                                            <div className="flex gap-1">
+                                              <button onClick={(e) => { e.stopPropagation(); setPreviewImg(img); }}
+                                                className="p-0.5 bg-white/30 rounded-full hover:bg-white/50 transition">
+                                                <ZoomIn size={12} className="text-white" />
+                                              </button>
+                                              <button onClick={(e) => { e.stopPropagation(); saveImage(img); }}
+                                                className="p-0.5 bg-white/30 rounded-full hover:bg-white/50 transition">
+                                                {savingImg === img.id
+                                                  ? <Check size={12} className="text-white" />
+                                                  : <Download size={12} className="text-white" />}
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {editingPrice === item.id && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="bg-white rounded-xl p-4">
-                            <p className="text-xs text-gray-500 mb-3">
-                              价格范围：¥{fenToYuan(item.base_price)}（保底价）~ ¥{fenToYuan(item.max_price)}（最高价），推荐价 ¥{fenToYuan(item.recommended_price)}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <div className="relative flex-1">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">¥</span>
-                                <input type="number" value={priceInput} onChange={e => setPriceInput(e.target.value)}
-                                  placeholder={`${fenToYuan(item.base_price)} ~ ${fenToYuan(item.max_price)}`}
-                                  className="w-full pl-8 pr-3 py-2.5 border border-gray-200 rounded-lg focus:border-green-500 focus:outline-none text-sm"
-                                  step="0.01" min={item.base_price / 100} max={item.max_price / 100} />
-                              </div>
-                              <button onClick={() => handleSetPrice(item.id)} disabled={priceLoading}
-                                className="bg-green-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-600 transition disabled:opacity-50 whitespace-nowrap">
-                                {priceLoading ? '保存中...' : '确认定价'}
-                              </button>
-                            </div>
-                            {priceInput && (
-                              <p className="text-xs text-green-600 mt-2">
-                                预计佣金：¥{(Math.round(parseFloat(priceInput) * 100 * item.commission_rate / 100 / 100) * 100 / 100).toFixed(2)}（{item.commission_rate}%）
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
-          )}
-
-          {/* ====== 推广素材 Tab（新增） ====== */}
-          {activeTab === 'promo' && (
-            <div className="p-4 space-y-6">
-              {/* 推广文案区 */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Megaphone size={16} className="text-green-600" />
-                    <span className="font-semibold text-gray-800 text-sm">推广文案</span>
-                    <span className="text-xs text-gray-400">#{promoIndex + 1}/{promotionTexts.length}</span>
-                  </div>
-                </div>
-
-                {/* 选择产品（如果有多个产品） */}
-                {products.length > 1 && (
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-400 mb-1.5">选择推广产品（文案中的链接将使用该产品）</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {products.map(p => (
-                        <button key={p.id} onClick={() => setPromoProductId(p.id)}
-                          className={`text-xs px-3 py-1.5 rounded-full transition ${promoProductId === p.id ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                          {p.icon} {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 文案展示 */}
-                <div className="bg-gray-50 rounded-xl p-4 relative">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed font-sans"
-                    style={{ fontFamily: 'inherit' }}>
-                    {getCurrentPromoText()}
-                  </pre>
-                </div>
-
-                {/* 操作按钮 */}
-                <div className="flex items-center gap-3 mt-3">
-                  <button onClick={copyPromoText}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition ${copiedId === 'promo_text' ? 'bg-green-500 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}>
-                    {copiedId === 'promo_text' ? <><Check size={16} />已复制文案</> : <><Copy size={16} />一键复制文案</>}
-                  </button>
-                  <button onClick={shufflePromo}
-                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
-                    <Shuffle size={16} /> 换一条
-                  </button>
-                </div>
-
-                {/* 快速翻页 */}
-                <div className="flex items-center justify-center gap-2 mt-3">
-                  <button onClick={() => setPromoIndex(i => (i - 1 + promotionTexts.length) % promotionTexts.length)}
-                    className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 transition">
-                    <ChevronLeft size={18} />
-                  </button>
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.min(promotionTexts.length, 10) }, (_, i) => {
-                      // 显示当前页附近的点
-                      const total = promotionTexts.length;
-                      let idx;
-                      if (total <= 10) {
-                        idx = i;
-                      } else {
-                        const start = Math.max(0, Math.min(promoIndex - 4, total - 10));
-                        idx = start + i;
-                      }
-                      return (
-                        <button key={idx} onClick={() => setPromoIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition ${idx === promoIndex ? 'bg-green-500 scale-125' : 'bg-gray-300 hover:bg-gray-400'}`} />
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => setPromoIndex(i => (i + 1) % promotionTexts.length)}
-                    className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 transition">
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {/* 分割线 */}
-              <div className="border-t border-gray-100" />
-
-              {/* 报告预览截图区 */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Image size={16} className="text-green-600" />
-                  <span className="font-semibold text-gray-800 text-sm">报告预览截图</span>
-                  <span className="text-xs text-gray-400">长按/点击保存后发给好友</span>
-                </div>
-
-                {PREVIEW_IMAGES.length === 0 ? (
-                  <div className="bg-gray-50 rounded-xl p-8 text-center">
-                    <Image size={32} className="mx-auto text-gray-200 mb-2" />
-                    <p className="text-gray-400 text-sm">暂无预览图片</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {PREVIEW_IMAGES.map(img => (
-                      <div key={img.id} className="relative group">
-                        <div className="bg-gray-100 rounded-xl overflow-hidden aspect-[3/4] cursor-pointer"
-                          onClick={() => setPreviewImg(img)}>
-                          <img src={img.url} alt={img.title}
-                            className="w-full h-full object-cover transition group-hover:scale-105"
-                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                          />
-                          <div className="hidden items-center justify-center w-full h-full bg-gray-100 text-gray-400 text-xs">
-                            加载失败
-                          </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent rounded-b-xl p-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-white text-xs">{img.title}</span>
-                            <div className="flex gap-1">
-                              <button onClick={(e) => { e.stopPropagation(); setPreviewImg(img); }}
-                                className="p-1 bg-white/30 rounded-full hover:bg-white/50 transition">
-                                <ZoomIn size={14} className="text-white" />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); saveImage(img); }}
-                                className="p-1 bg-white/30 rounded-full hover:bg-white/50 transition">
-                                {savingImg === img.id
-                                  ? <Check size={14} className="text-white" />
-                                  : <Download size={14} className="text-white" />}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {PREVIEW_IMAGES.length > 0 && (
-                  <p className="text-gray-300 text-xs text-center mt-3">
-                    💡 点击图片可查看大图，点击下载按钮可保存到本地
-                  </p>
-                )}
-              </div>
-            </div>
           )}
 
           {/* ====== 成交订单 Tab ====== */}
@@ -1168,7 +1163,6 @@ function App() {
             <X size={24} className="text-white" />
           </button>
 
-          {/* 左右切换 */}
           {PREVIEW_IMAGES.length > 1 && (
             <>
               <button className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full hover:bg-white/30 transition z-10"
