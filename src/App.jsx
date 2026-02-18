@@ -642,7 +642,7 @@ function App() {
                             </button>
                             <button onClick={() => copyLink(item)}
                               className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition ${copiedId === item.id ? 'bg-green-500 text-white' : 'bg-white text-green-600 hover:bg-green-50'}`}>
-                              {copiedId === item.id ? <><Check size={16} />已复制</> : <><Copy size={16} />复制</>}
+                              {copiedId === item.id ? <><Check size={16} />已复制</> : <><Copy size={16} />复制链接</>}
                             </button>
                           </div>
                         </div>
