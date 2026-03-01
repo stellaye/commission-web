@@ -53,6 +53,20 @@ function App() {
   const [withdrawalsHasMore, setWithdrawalsHasMore] = useState(false);
   const [withdrawalsTotal, setWithdrawalsTotal] = useState(0);
 
+  // ====== 佣金管理相关状态 ======
+  const [commissionView, setCommissionView] = useState('subordinates'); // subordinates, records, chain
+  const [subordinates, setSubordinates] = useState([]);
+  const [subordinatesLoading, setSubordinatesLoading] = useState(false);
+  const [levelFilter, setLevelFilter] = useState(0); // 0=全部, 1=直接下级, 2=二级下级
+  const [commissionRecords, setCommissionRecords] = useState([]);
+  const [commissionRecordsLoading, setCommissionRecordsLoading] = useState(false);
+  const [commissionRecordsPage, setCommissionRecordsPage] = useState(1);
+  const [commissionRecordsHasMore, setCommissionRecordsHasMore] = useState(false);
+  const [commissionRecordsTotal, setCommissionRecordsTotal] = useState(0);
+  const [referralChain, setReferralChain] = useState([]);
+  const [myLevel, setMyLevel] = useState(0);
+  const [chainLoading, setChainLoading] = useState(false);
+
   // ====== 每个产品独立的推广素材状态 ======
   const [expandedPromo, setExpandedPromo] = useState(null);
   const [promoIndexMap, setPromoIndexMap] = useState({});
@@ -187,10 +201,80 @@ function App() {
     finally { setWithdrawalsLoading(false); }
   };
 
+  // ====== 佣金管理相关函数 ======
+  const fetchSubordinates = async (openid, lt, level = 0) => {
+    setSubordinatesLoading(true);
+    try {
+      const res = await fetch(`/wanxiang/api/commission/subordinates?openid=${encodeURIComponent(openid)}&login_type=${lt}&level=${level}`);
+      const d = await res.json();
+      if (d.success) {
+        setSubordinates(d.subordinates || []);
+      }
+    } catch (e) { console.error('获取下级列表失败:', e); }
+    finally { setSubordinatesLoading(false); }
+  };
+
+  const fetchCommissionRecords = async (openid, lt, page = 1, append = false) => {
+    setCommissionRecordsLoading(true);
+    try {
+      const res = await fetch(`/wanxiang/api/commission/records?openid=${encodeURIComponent(openid)}&login_type=${lt}&page=${page}&page_size=${PAGE_SIZE}`);
+      const d = await res.json();
+      if (d.success) {
+        setCommissionRecords(prev => append ? [...prev, ...d.records] : d.records);
+        setCommissionRecordsTotal(d.total || 0);
+        setCommissionRecordsHasMore(d.has_more || false);
+        setCommissionRecordsPage(page);
+      }
+    } catch (e) { console.error('获取佣金明细失败:', e); }
+    finally { setCommissionRecordsLoading(false); }
+  };
+
+  const fetchReferralChain = async (openid, lt) => {
+    setChainLoading(true);
+    try {
+      const res = await fetch(`/wanxiang/api/commission/chain?openid=${encodeURIComponent(openid)}&login_type=${lt}`);
+      const d = await res.json();
+      if (d.success) {
+        setReferralChain(d.chain || []);
+        setMyLevel(d.my_level || 0);
+      }
+    } catch (e) { console.error('获取推广链失败:', e); }
+    finally { setChainLoading(false); }
+  };
+
+  const handleSetCommissionRate = async (childRefCode, rate) => {
+    try {
+      const res = await fetch('/wanxiang/api/commission/set_rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          openid: user.openid,
+          login_type: loginType,
+          child_ref_code: childRefCode,
+          commission_rate: rate,
+        }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        alert('设置成功');
+        fetchSubordinates(user.openid, loginType, levelFilter);
+      } else {
+        alert(d.msg || '设置失败');
+      }
+    } catch (e) {
+      alert('设置失败: ' + e.message);
+    }
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'orders' && orders.length === 0 && user) fetchOrders(user.openid, loginType, 1);
     if (tab === 'withdrawals' && withdrawals.length === 0 && user) fetchWithdrawals(user.openid, loginType, 1);
+    if (tab === 'commission' && user) {
+      if (commissionView === 'subordinates') fetchSubordinates(user.openid, loginType, levelFilter);
+      else if (commissionView === 'records') fetchCommissionRecords(user.openid, loginType, 1);
+      else if (commissionView === 'chain') fetchReferralChain(user.openid, loginType);
+    }
   };
 
   const handleSetPrice = async (productId) => {
@@ -521,6 +605,7 @@ function App() {
     { key: 'products', label: '推广链接', icon: <Copy size={14} /> },
     { key: 'orders', label: '成交订单', icon: <FileText size={14} /> },
     { key: 'withdrawals', label: '提现记录', icon: <ArrowDownCircle size={14} /> },
+    { key: 'commission', label: '佣金管理', icon: <Users size={14} /> },
   ];
 
   // 获取当前预览大图所属产品的预览图列表
@@ -937,6 +1022,248 @@ function App() {
                     </div>
                   )}
                 </div>
+              )}
+            </>
+          )}
+
+          {/* ====== 佣金管理 Tab ====== */}
+          {activeTab === 'commission' && (
+            <>
+              {/* 子视图切换按钮 */}
+              <div className="p-4 bg-gray-50 flex gap-2 overflow-x-auto">
+                {[
+                  { key: 'subordinates', label: '下级列表', icon: <Users size={14} /> },
+                  { key: 'records', label: '佣金明细', icon: <TrendingUp size={14} /> },
+                  { key: 'chain', label: '推广链', icon: <Gift size={14} /> },
+                ].map(view => (
+                  <button key={view.key}
+                    onClick={() => {
+                      setCommissionView(view.key);
+                      if (view.key === 'subordinates') fetchSubordinates(user.openid, loginType, levelFilter);
+                      else if (view.key === 'records') fetchCommissionRecords(user.openid, loginType, 1);
+                      else if (view.key === 'chain') fetchReferralChain(user.openid, loginType);
+                    }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                      commissionView === view.key
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                    }`}>
+                    {view.icon} {view.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 下级列表视图 */}
+              {commissionView === 'subordinates' && (
+                <>
+                  <div className="p-4 bg-white border-b flex gap-2 overflow-x-auto">
+                    {[
+                      { key: 0, label: '全部下级' },
+                      { key: 1, label: '直接下级' },
+                      { key: 2, label: '二级下级' },
+                    ].map(opt => (
+                      <button key={opt.key}
+                        onClick={() => {
+                          setLevelFilter(opt.key);
+                          fetchSubordinates(user.openid, loginType, opt.key);
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
+                          levelFilter === opt.key
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {subordinatesLoading ? (
+                    <div className="p-8 text-center">
+                      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-gray-400 text-sm">加载中...</p>
+                    </div>
+                  ) : subordinates.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <Users size={40} className="mx-auto text-gray-200 mb-3" />
+                      <p className="text-gray-400 text-sm">暂无下级用户</p>
+                      <p className="text-gray-300 text-xs mt-1">分享推广链接邀请好友注册</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 space-y-3">
+                      {subordinates.map(sub => (
+                        <div key={sub.user_id} className="bg-gray-50 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Users size={20} className="text-green-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-800 text-sm truncate">{sub.nickname}</p>
+                                <p className="text-gray-400 text-xs mt-0.5 font-mono">{sub.ref_code}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs font-medium">
+                                L{sub.level}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 mb-3">
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">佣金比例</p>
+                              <p className="text-sm font-bold text-green-600 mt-1">{sub.commission_rate}%</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">订单数</p>
+                              <p className="text-sm font-bold text-gray-800 mt-1">{sub.total_orders}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">累计佣金</p>
+                              <p className="text-sm font-bold text-orange-600 mt-1">¥{fenToYuan(sub.total_commission)}</p>
+                            </div>
+                          </div>
+                          {sub.level === 1 && (
+                            <button
+                              onClick={() => {
+                                const newRate = prompt(`设置 ${sub.nickname} 的佣金比例 (0-45):`, sub.commission_rate);
+                                if (newRate !== null) {
+                                  const rate = parseFloat(newRate);
+                                  if (!isNaN(rate) && rate >= 0 && rate <= 45) {
+                                    handleSetCommissionRate(sub.ref_code, rate);
+                                  } else {
+                                    alert('请输入0-45之间的数字');
+                                  }
+                                }
+                              }}
+                              className="w-full py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition">
+                              设置佣金比例
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* 佣金明细视图 */}
+              {commissionView === 'records' && (
+                <>
+                  <div className="p-4 bg-gray-50">
+                    <p className="text-gray-400 text-xs">共 {commissionRecordsTotal} 条佣金记录</p>
+                  </div>
+
+                  {commissionRecordsLoading && commissionRecords.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-gray-400 text-sm">加载中...</p>
+                    </div>
+                  ) : commissionRecords.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <TrendingUp size={40} className="mx-auto text-gray-200 mb-3" />
+                      <p className="text-gray-400 text-sm">暂无佣金记录</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 space-y-3">
+                      {commissionRecords.map((record, idx) => (
+                        <div key={`${record.order_no}_${idx}`} className="bg-gray-50 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <TrendingUp size={20} className="text-orange-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-800 text-sm">佣金收入</p>
+                                <p className="text-gray-400 text-xs mt-0.5">{record.created_time}</p>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-bold text-green-600">+¥{fenToYuan(record.commission_amount)}</p>
+                              <span className="inline-block px-2 py-0.5 bg-green-100 text-green-600 rounded-full text-xs mt-1">
+                                L{record.level}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 space-y-2">
+                            {[
+                              ['订单号', <span key="no" className="text-gray-600 font-mono text-[11px]">{record.order_no.slice(-12)}</span>],
+                              ['订单金额', `¥${fenToYuan(record.order_amount)}`],
+                              ['佣金比例', `${record.commission_rate}%`],
+                              ['佣金金额', <span key="amt" className="text-green-600 font-bold">¥{fenToYuan(record.commission_amount)}</span>],
+                            ].map(([label, val], i) => (
+                              <div key={i} className="flex justify-between text-xs">
+                                <span className="text-gray-400">{label}</span>
+                                <span className="text-gray-600">{val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {commissionRecordsHasMore && (
+                        <div className="text-center pt-2">
+                          <button
+                            onClick={() => fetchCommissionRecords(user.openid, loginType, commissionRecordsPage + 1, true)}
+                            disabled={commissionRecordsLoading}
+                            className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50">
+                            {commissionRecordsLoading ? '加载中...' : '加载更多'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* 推广链视图 */}
+              {commissionView === 'chain' && (
+                <>
+                  <div className="p-4 bg-gray-50">
+                    <p className="text-gray-400 text-xs">
+                      您的层级: <span className="text-green-600 font-bold">L{myLevel}</span>
+                    </p>
+                  </div>
+
+                  {chainLoading ? (
+                    <div className="p-8 text-center">
+                      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-gray-400 text-sm">加载中...</p>
+                    </div>
+                  ) : referralChain.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <Gift size={40} className="mx-auto text-gray-200 mb-3" />
+                      <p className="text-gray-400 text-sm">您是顶级用户</p>
+                      <p className="text-gray-300 text-xs mt-1">没有上级推荐人</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 space-y-3">
+                      {referralChain.map((node, idx) => (
+                        <div key={node.user_id} className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            idx === referralChain.length - 1 ? 'bg-green-500' : 'bg-gray-200'
+                          }`}>
+                            <span className={`text-sm font-bold ${
+                              idx === referralChain.length - 1 ? 'text-white' : 'text-gray-600'
+                            }`}>
+                              L{node.level}
+                            </span>
+                          </div>
+                          <div className="flex-1 bg-gray-50 rounded-xl p-3">
+                            <p className="font-semibold text-gray-800 text-sm">
+                              {node.nickname}
+                              {idx === referralChain.length - 1 && (
+                                <span className="ml-2 text-green-600 text-xs">(您)</span>
+                              )}
+                            </p>
+                            <p className="text-gray-400 text-xs mt-1">用户ID: {node.user_id}</p>
+                          </div>
+                          {idx < referralChain.length - 1 && (
+                            <ChevronDown size={20} className="text-gray-300 flex-shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
